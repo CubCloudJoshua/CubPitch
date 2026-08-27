@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "types": ["node", "vite/client"],
+    "paths": {
+      "@cubpitch/core": ["../../packages/core/src/index.ts"],
+      "@cubpitch/theme": ["../../packages/theme/src/index.ts"],
+      "@cubpitch/render": ["../../packages/render/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*", "server/**/*", "vite.config.ts"]
+}

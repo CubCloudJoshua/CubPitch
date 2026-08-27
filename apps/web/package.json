@@ -1,0 +1,27 @@
+{
+  "name": "@cubpitch/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --experimental-strip-types server/index.ts",
+    "build": "vite build && tsc -p tsconfig.server.json",
+    "start": "node dist-server/index.js"
+  },
+  "dependencies": {
+    "@cubpitch/core": "workspace:*",
+    "@cubpitch/theme": "workspace:*",
+    "@cubpitch/render": "workspace:*",
+    "@cubpitch/export": "workspace:*",
+    "@cubpitch/storage": "workspace:*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@vitejs/plugin-react": "^5.1.1",
+    "vite": "^8.2.2"
+  }
+}

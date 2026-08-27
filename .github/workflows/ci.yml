@@ -25,6 +25,9 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Typecheck the editor
+        run: pnpm exec tsc -p apps/web/tsconfig.json
+
       - name: Test
         run: pnpm test
 

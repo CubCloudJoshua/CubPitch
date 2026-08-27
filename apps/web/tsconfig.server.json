@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "rootDir": "./server",
+    "outDir": "./dist-server",
+    "types": ["node"],
+    "paths": {
+      "@cubpitch/core": ["../../packages/core/dist/index.d.ts"],
+      "@cubpitch/theme": ["../../packages/theme/dist/index.d.ts"],
+      "@cubpitch/render": ["../../packages/render/dist/index.d.ts"],
+      "@cubpitch/export": ["../../packages/export/dist/index.d.ts"],
+      "@cubpitch/storage": ["../../packages/storage/dist/index.d.ts"]
+    }
+  },
+  "include": ["server/**/*"]
+}
