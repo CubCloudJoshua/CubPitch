@@ -108,6 +108,8 @@ node apps/cli/dist/index.js export examples/cubcloud-seed.json --out ./out
 | `html <deck>` | Write a standalone HTML deck |
 | `methodologies` | Frameworks available |
 | `themes` | Themes available |
+| `versions <deck>` | Earlier saves of a deck |
+| `restore <deck>` | Restore one (`--version N`, `--dry-run`) |
 | `draft <brief>` | Draft a deck from a brief (needs `ANTHROPIC_API_KEY`) |
 | `critique <deck>` | Read the deck as a partner would |
 | `rewrite <deck>` | Rewrite one slide (`--slide N`, `--instruction`, `--dry-run`) |

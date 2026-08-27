@@ -1,4 +1,4 @@
-import { parseDeck, slugify, type Deck } from '@cubpitch/core';
+import { parseDeck, type Deck } from '@cubpitch/core';
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import {
@@ -113,7 +113,7 @@ export class FileDeckStore implements DeckStore {
       versions.push({
         version: Number(match[1]),
         savedAt: info.mtime.toISOString(),
-        note: (match[2] ?? '').replace(/-/g, ' ').trim(),
+        note: decodeNote(match[2] ?? ''),
       });
     }
     return versions.sort((a, b) => b.version - a.version);
@@ -151,13 +151,36 @@ export class FileDeckStore implements DeckStore {
     const numbers = existing.map((file) => Number(file.match(/^(\d+)-/)?.[1] ?? 0));
     const next = Math.max(0, ...numbers) + 1;
 
-    const name = `${String(next).padStart(6, '0')}-${slugify(note || 'save')}.json`;
+    const name = `${String(next).padStart(6, '0')}-${encodeNote(note)}.json`;
     await writeAtomic(join(versionsDir, name), JSON.stringify(deck, null, 2));
 
     const all = [...existing, name].sort();
     for (const stale of all.slice(0, Math.max(0, all.length - this.keepVersions))) {
       await rm(join(versionsDir, stale), { force: true });
     }
+  }
+}
+
+/**
+ * The note is carried in the filename, percent-encoded.
+ *
+ * Slugifying it lost information the note existed to preserve: "Sent to
+ * Sequoia" came back as "sent to sequoia", and a note with a date or a slash in
+ * it came back mangled. Percent-encoding is filesystem-safe on every platform
+ * this runs on and round-trips exactly, which keeps the directory listing
+ * readable and the note true.
+ */
+function encodeNote(note: string): string {
+  return encodeURIComponent(note.trim() || 'save').slice(0, 120);
+}
+
+function decodeNote(encoded: string): string {
+  try {
+    return decodeURIComponent(encoded);
+  } catch {
+    // A version written before this encoding, or by hand. Show it as-is rather
+    // than failing to list the history.
+    return encoded.replace(/-/g, ' ');
   }
 }
 

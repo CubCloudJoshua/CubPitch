@@ -92,6 +92,10 @@ async function main(): Promise<number> {
           out: flagString(args, 'out', '') || undefined,
         });
       });
+    case 'versions':
+      return cmdVersions(args);
+    case 'restore':
+      return cmdRestore(args);
     case 'methodologies':
       return cmdMethodologies();
     case 'themes':
@@ -283,6 +287,80 @@ async function cmdHtml(args: ParsedArgs): Promise<number> {
   return 0;
 }
 
+/**
+ * Deck history.
+ *
+ * Every save writes the state it replaced, so this is the answer to "what did
+ * this look like before I let the model rewrite it" and to "what did we
+ * actually send Sequoia". Without a way to list and restore them the versions
+ * were being written and never read.
+ */
+async function cmdVersions(args: ParsedArgs): Promise<number> {
+  const id = args.positional[0];
+  if (!id) {
+    process.stderr.write('Usage: cubpitch versions <deck-id>\n');
+    return 1;
+  }
+
+  const store = new FileDeckStore({ root: storeRoot(args) });
+  const versions = await store.versions(id);
+  if (versions.length === 0) {
+    process.stdout.write(`No earlier versions of ${id}.\n`);
+    return 0;
+  }
+
+  process.stdout.write(
+    `${table([
+      [dim('VERSION'), dim('SAVED'), dim('WHAT IT REPLACED')],
+      ...versions.map((version) => [
+        String(version.version),
+        version.savedAt.slice(0, 16).replace('T', ' '),
+        version.note || dim('(no note)'),
+      ]),
+    ])}\n\nRestore one with: ${accent(`cubpitch restore ${id} --version <n>`)}\n`,
+  );
+  return 0;
+}
+
+async function cmdRestore(args: ParsedArgs): Promise<number> {
+  const id = args.positional[0];
+  const version = Number(flagString(args, 'version', ''));
+  if (!id || !Number.isInteger(version) || version < 1) {
+    process.stderr.write('Usage: cubpitch restore <deck-id> --version <n>\n');
+    return 1;
+  }
+
+  const store = new FileDeckStore({ root: storeRoot(args) });
+  const earlier = await store.getVersion(id, version);
+  if (!earlier) {
+    process.stderr.write(`Deck ${id} has no version ${version}. Run: cubpitch versions ${id}\n`);
+    return 1;
+  }
+
+  const current = await store.get(id);
+  if (!current) {
+    process.stderr.write(`No deck ${id} in ${storeRoot(args)}\n`);
+    return 1;
+  }
+
+  if (flagBool(args, 'dry-run')) {
+    process.stdout.write(
+      `${dim('Dry run.')} Version ${version} has ${earlier.slides.length} slides; the current deck has ${current.slides.length}.\n` +
+        `  ${dim('title')} ${earlier.title}\n`,
+    );
+    return 0;
+  }
+
+  // Restoring is itself a save, so the state being replaced is kept too: an
+  // accidental restore is undone by restoring the version it just wrote.
+  await store.put({ ...earlier, id: current.id }, { note: `restored version ${version}` });
+  process.stdout.write(
+    `${green('Restored')} version ${version} of ${bold(earlier.title)}\n` +
+      `${dim('The version you just replaced is in the history too.')}\n`,
+  );
+  return 0;
+}
+
 function cmdMethodologies(): number {
   for (const methodology of METHODOLOGIES) {
     process.stdout.write(
@@ -391,6 +469,8 @@ ${heading('Commands')}
   review <deck>          Check the deck against its methodology
   export <deck>          Write PDF and PowerPoint
   html <deck>            Write a standalone HTML deck
+  versions <deck>        Earlier saves of a deck
+  restore <deck>         Restore one (--version N, --dry-run)
   methodologies          Pitch frameworks available
   themes                 Themes available
 
@@ -414,7 +494,8 @@ ${heading('Options')}
   --guidance <text>      Extra direction for the drafter
   --slide <n>            Which slide to rewrite
   --instruction <text>   What to change: "tighter", "lead with the number"
-  --dry-run              Show the rewrite without saving it
+  --dry-run              Show the change without saving it
+  --version <n>          Which version to restore
   --model <id>           Override the model
 
 ${heading('Examples')}

@@ -127,3 +127,41 @@ describe('file store robustness', () => {
     }
   });
 });
+
+describe('version notes', () => {
+  it('round-trips a note exactly rather than slugifying it', async () => {
+    // The note exists to answer "what did we send Sequoia". Lowercasing it and
+    // replacing its punctuation with hyphens loses the thing it was for.
+    const root = mkdtempSync(join(tmpdir(), 'cubpitch-notes-'));
+    try {
+      const store = new FileDeckStore({ root });
+      const deck = await store.put(sampleDeck());
+      await store.put({ ...deck, title: 'v2' }, { note: 'Sent to Sequoia, 12 Sept' });
+
+      const [latest] = await store.versions(deck.id);
+      expect(latest!.note).toBe('Sent to Sequoia, 12 Sept');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('restores an earlier version and keeps what it replaced', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'cubpitch-restore-'));
+    try {
+      const store = new FileDeckStore({ root });
+      const first = await store.put(sampleDeck(), { note: 'first' });
+      await store.put({ ...first, title: 'Second' }, { note: 'the original' });
+      await store.put({ ...first, title: 'Third' }, { note: 'the second' });
+
+      const original = await store.getVersion(first.id, 1);
+      expect(original!.title).toBe(first.title);
+
+      await store.put({ ...original!, id: first.id }, { note: 'restored version 1' });
+      expect((await store.get(first.id))!.title).toBe(first.title);
+      // An accidental restore is undone by restoring what it just replaced.
+      expect((await store.versions(first.id))[0]!.note).toBe('restored version 1');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
