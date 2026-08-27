@@ -147,8 +147,12 @@ Return one entry per slide above, in that order, using the given type for each.`
 }
 
 function userPrompt(input: DraftInput): string {
+  // The company name comes from the same request as the brief, so it goes
+  // inside the fence too. An inconsistent boundary is one an attacker reads as
+  // an invitation.
   const parts = [
-    `Company: ${input.company}`,
+    'Company name:',
+    wrapUntrusted(input.company, 'company'),
     '',
     'The founder supplied this brief:',
     wrapUntrusted(input.brief, 'brief'),

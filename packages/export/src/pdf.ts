@@ -1,7 +1,7 @@
 import type { Deck } from '@cubpitch/core';
 import { renderDeckHtml, renderSlideHtml } from '@cubpitch/render';
 import { SLIDE_HEIGHT, SLIDE_WIDTH } from '@cubpitch/theme';
-import { launchBrowser, type BrowserOptions } from './browser.js';
+import { applyNetworkPolicy, launchBrowser, type BrowserOptions, type NetworkPolicy } from './browser.js';
 
 /**
  * PDF export.
@@ -15,11 +15,13 @@ import { launchBrowser, type BrowserOptions } from './browser.js';
  * that decides how big a slide is.
  */
 
-export interface PdfOptions extends BrowserOptions {
+export interface PdfOptions extends BrowserOptions, NetworkPolicy {
   /** Load Google Fonts. Off renders with fallback faces and no network. */
   webFonts?: boolean;
   /** Milliseconds to wait for fonts and images. */
   timeoutMs?: number;
+  /** Called with any URL the network policy refused. */
+  onBlocked?: (urls: string[]) => void;
 }
 
 const DEFAULT_TIMEOUT = 30_000;
@@ -32,6 +34,10 @@ async function withPage<T>(
   const browser = await launchBrowser(options);
   try {
     const page = await browser.newPage({ viewport: { width: SLIDE_WIDTH, height: SLIDE_HEIGHT } });
+    const blocked = await applyNetworkPolicy(page, {
+      allowFonts: options.webFonts !== false,
+      ...(options.allowRemoteMedia === true ? { allowRemoteMedia: true } : {}),
+    });
     const timeout = options.timeoutMs ?? DEFAULT_TIMEOUT;
     await page.setContent(html, { waitUntil: 'load', timeout });
 
@@ -39,7 +45,9 @@ async function withPage<T>(
     // print in the real one, which looks like a bug in the deck.
     await page.evaluate(() => document.fonts.ready).catch(() => undefined);
 
-    return await action(page);
+    const result = await action(page);
+    if (blocked.length > 0) options.onBlocked?.(blocked);
+    return result;
   } finally {
     await browser.close();
   }
@@ -66,6 +74,10 @@ export async function slideToPng(
     const page = await browser.newPage({
       viewport: { width: SLIDE_WIDTH, height: SLIDE_HEIGHT },
       deviceScaleFactor: scale,
+    });
+    await applyNetworkPolicy(page, {
+      allowFonts: options.webFonts !== false,
+      ...(options.allowRemoteMedia === true ? { allowRemoteMedia: true } : {}),
     });
     await page.setContent(html, { waitUntil: 'load', timeout: options.timeoutMs ?? DEFAULT_TIMEOUT });
     await page.evaluate(() => document.fonts.ready).catch(() => undefined);

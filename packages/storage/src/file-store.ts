@@ -1,6 +1,6 @@
-import { parseDeck, type Deck } from '@cubpitch/core';
+import { assertSafeId, isSafeId, parseDeck, type Deck } from '@cubpitch/core';
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 import {
   ConcurrentWriteError,
   DeckNotFoundError,
@@ -42,8 +42,24 @@ export class FileDeckStore implements DeckStore {
     this.keepVersions = options.keepVersions ?? 50;
   }
 
+  /**
+   * The directory for a deck, or an error.
+   *
+   * Two checks, not one. The id must look like an id, and the resolved path
+   * must still be inside the store. Either alone would probably do; both
+   * together mean a future caller that skips validation upstream cannot turn
+   * this into an arbitrary write, which is what a `..` in a deck id used to
+   * buy: `PUT /api/decks/..%2Fx` wrote a deck.json outside the root, and a
+   * DELETE then removed that whole directory and everything else in it.
+   */
   private deckDir(id: string): string {
-    return join(this.root, id);
+    assertSafeId(id, 'deck id');
+    const dir = resolve(this.root, id);
+    const root = resolve(this.root);
+    if (dir !== root && !dir.startsWith(root + sep)) {
+      throw new Error(`Refusing to touch ${dir}, which is outside the deck store.`);
+    }
+    return dir;
   }
 
   async list(): Promise<DeckSummary[]> {
@@ -57,6 +73,10 @@ export class FileDeckStore implements DeckStore {
 
     const summaries: DeckSummary[] = [];
     for (const entry of entries) {
+      // A directory whose name is not a legal id is not ours. Skipping is
+      // right here: `list` must not fail because someone put a folder in the
+      // deck store.
+      if (!isSafeId(entry)) continue;
       const deck = await this.readDeckFile(join(this.root, entry, DECK_FILE));
       if (deck) summaries.push(summarise(deck));
     }
@@ -64,6 +84,7 @@ export class FileDeckStore implements DeckStore {
   }
 
   async get(id: string): Promise<Deck | null> {
+    if (!isSafeId(id)) return null;
     return this.readDeckFile(join(this.deckDir(id), DECK_FILE));
   }
 
@@ -97,6 +118,7 @@ export class FileDeckStore implements DeckStore {
   }
 
   async versions(id: string): Promise<DeckVersion[]> {
+    if (!isSafeId(id)) return [];
     const dir = join(this.deckDir(id), VERSIONS_DIR);
     let files: string[];
     try {
@@ -120,6 +142,7 @@ export class FileDeckStore implements DeckStore {
   }
 
   async getVersion(id: string, version: number): Promise<Deck | null> {
+    if (!isSafeId(id)) return null;
     const dir = join(this.deckDir(id), VERSIONS_DIR);
     let files: string[];
     try {

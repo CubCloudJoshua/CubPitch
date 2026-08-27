@@ -143,7 +143,9 @@ export async function rewriteSlide(provider: ModelProvider, input: RewriteInput)
   const patch: Record<string, string> = {};
   const ignored: string[] = [];
   for (const [key, value] of Object.entries(result.value.fields)) {
-    if (key in fields) patch[key] = value;
+    // hasOwn, not `in`: `in` walks the prototype chain, so `constructor` and
+    // `toString` would pass a guard meant to mean "a field this slide has".
+    if (Object.hasOwn(fields, key)) patch[key] = value;
     else ignored.push(key);
   }
 

@@ -25,8 +25,16 @@ Conventions for coding agents and humans. Read this before your first change.
 7. **One slide pixel is 1/144 inch; one point is two slide pixels.** Every
    conversion in the exporter is that identity. If you find yourself introducing
    a second scale factor, something is wrong.
-8. **Deck text is untrusted input.** It lands in an HTML document and in an XML
-   archive. Render it through the existing primitives, which escape it.
+8. **Deck text is untrusted input.** It lands in an HTML document, an XML
+   archive, and a model prompt. Render it through the existing primitives, which
+   escape it, and fence it with `wrapUntrusted` before it reaches a prompt.
+9. **A deck id is an identifier, not a path.** Anything that turns an id into a
+   filesystem path goes through `assertSafeId` first. A `..` in a deck id was an
+   arbitrary file write and a recursive delete; three layers stop it now and
+   none of them is redundant.
+10. **The PDF renderer fetches nothing unless asked.** An image URL in a deck is
+    an outbound request made by the server. Route it through the network policy
+    in `packages/export/src/browser.ts`.
 
 ## Layering
 

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { MediaRef } from './blocks.js';
+import { isSafeId } from './ids.js';
 import { Slide } from './slide.js';
 
 /**
@@ -48,7 +49,12 @@ export const DeckMeta = z.object({
 export type DeckMeta = z.infer<typeof DeckMeta>;
 
 export const Deck = z.object({
-  id: z.string().min(1),
+  /**
+   * Constrained rather than merely non-empty. A deck id becomes a directory
+   * name and a URL segment, so one containing `..` or a slash would let a
+   * request write and delete outside the deck store.
+   */
+  id: z.string().refine(isSafeId, 'Deck id must be letters, digits, underscore or hyphen'),
   schemaVersion: z.number().int().positive().default(SCHEMA_VERSION),
   title: z.string().min(1),
   company: Company,

@@ -131,7 +131,7 @@ apps/
   cli/        The cubpitch command
   web/        Editor: rail, canvas, inspector, review, presenter
 examples/     A complete worked deck
-tests/        108 tests
+tests/        129 tests
 ```
 
 Dependencies point one way:
@@ -156,6 +156,26 @@ sizes as plain numbers in slide pixels because a token has to survive
 translation into a world with no CSS.
 
 ---
+
+## Security posture
+
+The API has no authentication. That is a deliberate choice for a tool one person
+runs on their own machine, and it is why the server **binds to loopback by
+default**; set `CUBPITCH_HOST` to bind wider and it warns you.
+
+Two things a security review found and these now enforce:
+
+- **A deck id is an identifier, not a path.** Ids reach a filesystem path and a
+  URL segment, so one containing `..` used to write outside the deck store and
+  recursively delete any directory holding a `deck.json`. Ids are now checked by
+  the schema, by the store (which also resolves and asserts containment), and by
+  the server.
+- **The renderer fetches nothing by default.** Every image URL in a deck becomes
+  a request made by the *server* when someone exports a PDF, so a pasted deck
+  could reach an internal host. Embedded `data:` images always work; remote media
+  is an explicit opt-in (`allowRemoteMedia`), and blocked URLs are reported
+  rather than silently dropped. `file:`, `javascript:` and `vbscript:` sources
+  are refused outright.
 
 ## Requirements
 

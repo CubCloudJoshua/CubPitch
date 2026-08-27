@@ -36,7 +36,13 @@ export const MediaRef = z.object({
    * separate acts, and a schema that rejects the gap between them is a schema
    * that loses the author's work when they add the slide first.
    */
-  src: z.string().default(''),
+  src: z
+    .string()
+    .default('')
+    .refine(
+      (value) => !/^\s*(javascript|file|vbscript):/i.test(value),
+      'Image source must not use a javascript:, file: or vbscript: scheme',
+    ),
   alt: z.string().default(''),
   fit: z.enum(['cover', 'contain']).default('cover'),
   /** Focal point as fractions of width/height, used when cropping to `cover`. */

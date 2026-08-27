@@ -1,7 +1,7 @@
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
-import { parseDeck, reviewDeck, starterDeck, type Deck } from '@cubpitch/core';
+import { isSafeId, parseDeck, reviewDeck, starterDeck, type Deck } from '@cubpitch/core';
 import { deckToPdf, deckToPptx, findOverflow } from '@cubpitch/export';
 import { ConcurrentWriteError, DeckNotFoundError, FileDeckStore } from '@cubpitch/storage';
 import { AnthropicProvider, critiqueDeck, draftDeck, ModelError, prepareQa, rewriteSlide } from '@cubpitch/ai';
@@ -16,6 +16,14 @@ import { AnthropicProvider, critiqueDeck, draftDeck, ModelError, prepareQa, rewr
  */
 
 const PORT = Number(process.env['PORT'] ?? 4100);
+/**
+ * Loopback by default.
+ *
+ * There is no authentication on this API, which is a reasonable choice for a
+ * tool one person runs on their own machine and a bad one the moment the port
+ * is reachable from a network. Binding somewhere else has to be deliberate.
+ */
+const HOST = process.env['CUBPITCH_HOST'] ?? '127.0.0.1';
 const ROOT = resolve(process.env['CUBPITCH_HOME'] ?? join(process.cwd(), 'decks'));
 const STATIC_DIR = resolve(process.env['CUBPITCH_STATIC'] ?? join(import.meta.dirname, '..', 'dist'));
 
@@ -152,7 +160,10 @@ route('GET', '/api/decks/:id/layout', async (_request, response, params) => {
   try {
     send(response, 200, await findOverflow(deck, { webFonts: false }));
   } catch (error) {
-    send(response, 503, { error: (error as Error).message });
+    // The underlying message names the browser's path on disk. Log it, do not
+    // hand it to an unauthenticated caller.
+    process.stderr.write(`layout measurement failed: ${(error as Error).message}\n`);
+    send(response, 503, { error: 'Could not measure the layout. The PDF renderer is not available.' });
   }
 });
 
@@ -247,7 +258,20 @@ async function handle(request: IncomingMessage, response: ServerResponse): Promi
     if (entry.method !== request.method) continue;
     const match = entry.pattern.exec(url.pathname);
     if (!match) continue;
+
     const params = Object.fromEntries(entry.keys.map((key, index) => [key, decodeURIComponent(match[index + 1] ?? '')]));
+
+    // Ids from the URL reach a filesystem path. They are checked here, in the
+    // store, and by the schema, because a `..` in a deck id was an arbitrary
+    // file write and a recursive delete of any directory the process could
+    // reach. One layer would probably hold; three is what this is worth.
+    for (const key of ['id', 'slideId']) {
+      const value = params[key];
+      if (value !== undefined && !isSafeId(value)) {
+        return send(response, 400, { error: `Malformed ${key}` });
+      }
+    }
+
     return entry.handler(request, response, params);
   }
 
@@ -279,7 +303,12 @@ function serveStatic(pathname: string, response: ServerResponse): void {
   }
 
   response.writeHead(200, { 'content-type': MIME[extname(file)] ?? 'application/octet-stream' });
-  createReadStream(file).pipe(response);
+
+  // A file removed between the stat above and this read would otherwise emit an
+  // unhandled 'error' and take the process down.
+  const stream = createReadStream(file);
+  stream.on('error', () => response.destroy());
+  stream.pipe(response);
 }
 
 async function readJson<T>(request: IncomingMessage): Promise<T> {
@@ -306,8 +335,13 @@ function send(response: ServerResponse, status: number, body: unknown): void {
   response.end(payload);
 }
 
-server.listen(PORT, () => {
-  process.stdout.write(`CubPitch editor API on http://localhost:${PORT}\n  decks: ${ROOT}\n  static: ${STATIC_DIR}\n`);
+server.listen(PORT, HOST, () => {
+  process.stdout.write(
+    `CubPitch editor API on http://${HOST}:${PORT}\n  decks: ${ROOT}\n  static: ${STATIC_DIR}\n` +
+      (HOST === '127.0.0.1'
+        ? ''
+        : '  WARNING: bound beyond loopback and this API has no authentication.\n'),
+  );
 });
 
 export { server };

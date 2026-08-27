@@ -42,6 +42,15 @@ export interface PptxOptions {
   author?: string;
   /** Compress the archive. Roughly 30% smaller, slightly slower. */
   compression?: boolean;
+  /**
+   * Let the exporter fetch remote images.
+   *
+   * Off by default for the same reason the PDF renderer refuses them: an image
+   * URL in a deck becomes a request made by the server, so a pasted deck can
+   * reach an internal host the moment someone exports it. Embedded `data:`
+   * images always work.
+   */
+  allowRemoteMedia?: boolean;
 }
 
 const LAYOUT_NAME = 'CUBPITCH_16x9';
@@ -67,6 +76,7 @@ export async function deckToPptx(deck: Deck, options: PptxOptions = {}): Promise
       deck,
       theme,
       type,
+      allowRemoteMedia: options.allowRemoteMedia === true,
       scale: (style, factor) => scaleStyle(style, factor, methodology.minFontPt),
       pptx,
       slide: target,
@@ -84,6 +94,8 @@ interface Ctx {
   deck: Deck;
   theme: Theme;
   type: Record<string, TypeStyle>;
+  /** Whether the exporter may fetch an image over the network. */
+  allowRemoteMedia: boolean;
   /** Derive a size while keeping the methodology's minimum font size. */
   scale: (style: TypeStyle, factor: number) => TypeStyle;
   pptx: PptxPresentation;
@@ -841,11 +853,22 @@ function drawSlide(ctx: Ctx, slide: Slide): void {
     }
 
     case 'image': {
-      if (slide.media.src.startsWith('data:') || slide.media.src.startsWith('http')) {
+      const embedded = slide.media.src.startsWith('data:');
+      const remote = /^https?:/i.test(slide.media.src);
+      if (embedded || (remote && ctx.allowRemoteMedia)) {
         ctx.slide.addImage({
           ...inches({ x: 0, y: 0, w: SLIDE_WIDTH, h: slide.caption ? SLIDE_HEIGHT - 140 : SLIDE_HEIGHT }),
-          ...(slide.media.src.startsWith('data:') ? { data: slide.media.src } : { path: slide.media.src }),
+          ...(embedded ? { data: slide.media.src } : { path: slide.media.src }),
         });
+      } else if (remote) {
+        // Say so on the slide rather than exporting a silent blank.
+        text(
+          ctx,
+          'Image not embedded. Re-export with remote media allowed, or paste the image into the deck.',
+          { x: layout.pad, y: SLIDE_HEIGHT / 2 - 40, w: layout.contentWidth, h: 80 },
+          ctx.type.small!,
+          { align: 'center' },
+        );
       }
       if (slide.caption) {
         text(ctx, slide.caption, { x: layout.pad, y: SLIDE_HEIGHT - 110, w: layout.contentWidth, h: 60 }, ctx.type.small!);

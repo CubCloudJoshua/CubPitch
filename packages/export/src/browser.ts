@@ -42,3 +42,66 @@ export async function launchBrowser(options: BrowserOptions = {}): Promise<Brows
     );
   }
 }
+
+/**
+ * What the renderer is allowed to fetch.
+ *
+ * Deck content is author-supplied and may be pasted or imported, and every
+ * image URL in it becomes an outbound request made *by the server* when someone
+ * exports a PDF or measures a layout. That is a server-side request forgery
+ * primitive: a deck carrying `http://10.0.0.5:8080/admin/reboot` reaches an
+ * internal host the moment a colleague hits export, and a unique URL is a
+ * beacon that says when the deck was opened.
+ *
+ * So the renderer fetches nothing by default. Embedded `data:` images always
+ * work, which is what a deck should use anyway: a logo that hotlinks somewhere
+ * breaks the day that host does. Remote media is an explicit opt-in, and the
+ * blocked URLs are reported rather than silently dropped.
+ */
+export const FONT_HOSTS = new Set(['fonts.googleapis.com', 'fonts.gstatic.com']);
+
+export interface NetworkPolicy {
+  /** Let the page fetch images and media from any host. Off by default. */
+  allowRemoteMedia?: boolean;
+  /** Let the page fetch the theme's web fonts. */
+  allowFonts?: boolean;
+}
+
+export function isAllowedUrl(rawUrl: string, policy: NetworkPolicy): boolean {
+  // data:, blob: and about: never leave the process.
+  if (/^(data|blob|about):/i.test(rawUrl)) return true;
+
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+
+  // file: would let a deck read the host's disk into an exported PDF.
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+  if (policy.allowFonts && FONT_HOSTS.has(url.hostname)) return true;
+  return policy.allowRemoteMedia === true;
+}
+
+/**
+ * Apply the policy to a page, collecting what it refused.
+ *
+ * Returns the blocked URLs so a caller can tell the author which images did not
+ * load, rather than handing them a deck with silent holes in it.
+ */
+export async function applyNetworkPolicy(
+  page: import('playwright').Page,
+  policy: NetworkPolicy,
+): Promise<string[]> {
+  const blocked: string[] = [];
+
+  await page.route('**/*', async (route) => {
+    const url = route.request().url();
+    if (isAllowedUrl(url, policy)) return route.continue();
+    if (!blocked.includes(url)) blocked.push(url);
+    return route.abort();
+  });
+
+  return blocked;
+}

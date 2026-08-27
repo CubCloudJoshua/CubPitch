@@ -1,7 +1,7 @@
 import { visibleSlides, slideTitle, type Deck } from '@cubpitch/core';
 import { renderDeckHtml } from '@cubpitch/render';
 import { SLIDE_HEIGHT, SLIDE_WIDTH } from '@cubpitch/theme';
-import { launchBrowser, type BrowserOptions } from './browser.js';
+import { applyNetworkPolicy, launchBrowser, type BrowserOptions, type NetworkPolicy } from './browser.js';
 
 /**
  * Overflow detection.
@@ -25,7 +25,7 @@ export interface OverflowFinding {
   overflowPx: number;
 }
 
-export interface OverflowOptions extends BrowserOptions {
+export interface OverflowOptions extends BrowserOptions, NetworkPolicy {
   webFonts?: boolean;
   timeoutMs?: number;
   /** Overflow under this many pixels is sub-pixel rounding, not a problem. */
@@ -42,6 +42,10 @@ export async function findOverflow(deck: Deck, options: OverflowOptions = {}): P
   const browser = await launchBrowser(options);
   try {
     const page = await browser.newPage({ viewport: { width: SLIDE_WIDTH, height: SLIDE_HEIGHT } });
+    await applyNetworkPolicy(page, {
+      allowFonts: options.webFonts !== false,
+      ...(options.allowRemoteMedia === true ? { allowRemoteMedia: true } : {}),
+    });
     await page.setContent(html, { waitUntil: 'load', timeout: options.timeoutMs ?? 30_000 });
     await page.evaluate(() => document.fonts.ready).catch(() => undefined);
 

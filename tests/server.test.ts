@@ -146,3 +146,40 @@ describe('editor API', () => {
     expect(response.status).toBe(400);
   });
 });
+
+describe('the API rejects ids that are paths', () => {
+  /**
+   * Both of these were verified as live exploits before the fix: the first
+   * wrote a deck.json outside the store, and the second recursively deleted
+   * any directory that contained one.
+   */
+  it('refuses a traversal on write', async () => {
+    const response = await fetch(`${base}/api/decks/..%2Fescaped-write`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ deck: { ...deck, id: '../escaped-write' } }),
+    });
+    expect(response.status).toBe(400);
+  });
+
+  it('refuses a traversal on delete', async () => {
+    expect((await fetch(`${base}/api/decks/..%2Fvictim`, { method: 'DELETE' })).status).toBe(400);
+  });
+
+  it('refuses a traversal on every id-bearing route', async () => {
+    for (const path of ['', '/review', '/layout', '/versions', '/export.pdf', '/export.pptx']) {
+      const response = await fetch(`${base}/api/decks/..%2Fescaped${path}`);
+      expect(response.status, `GET /api/decks/../escaped${path}`).toBe(400);
+    }
+  });
+
+  it('does not leak a filesystem path when the renderer is unavailable', async () => {
+    // This route used to return the browser's path on disk to an
+    // unauthenticated caller.
+    const response = await fetch(`${base}/api/decks/dck_test/layout`);
+    if (response.status === 503) {
+      const body = (await response.json()) as { error: string };
+      expect(body.error).not.toMatch(/\/(opt|usr|home|root)\//);
+    }
+  });
+});

@@ -42,3 +42,32 @@ export function slugify(input: string): string {
     .slice(0, 60);
   return slug.length > 0 ? slug : 'untitled';
 }
+
+/**
+ * The shape a deck or slide id is allowed to take.
+ *
+ * Ids reach a filesystem path and a URL segment, so this is a security
+ * boundary rather than a formatting preference: an id containing `..`, a
+ * slash, or a leading separator escapes the deck store. Letters, digits,
+ * underscore and hyphen cannot.
+ */
+const ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
+
+export function isSafeId(value: unknown): value is string {
+  return typeof value === 'string' && ID_PATTERN.test(value);
+}
+
+/** Throws unless the value is a legal id. Use before touching the filesystem. */
+export function assertSafeId(value: unknown, what = 'id'): string {
+  if (!isSafeId(value)) {
+    throw new UnsafeIdError(`${what} ${JSON.stringify(value)} is not a legal identifier.`);
+  }
+  return value;
+}
+
+export class UnsafeIdError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'UnsafeIdError';
+  }
+}
