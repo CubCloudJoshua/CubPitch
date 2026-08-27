@@ -218,17 +218,36 @@ export function reviewDeck(deck: Deck): DeckReview {
   // --- Rule: title the slide with the conclusion ----------------------------
 
   if (hasRule('conclusion-title')) {
-    for (const slide of visible) {
-      if (!('title' in slide) || typeof slide.title !== 'string') continue;
-      const title = plainText(slide.title).trim().toLowerCase().replace(/[.:]$/, '');
-      if (TOPIC_TITLES.has(title)) {
-        add(
-          'warning',
-          'conclusion-title',
-          `"${slide.title}" is a topic, not a conclusion. Title it with the finding: "Gyms already pay $400/mo to stop churn", not "Market".`,
-          slide.id,
-        );
-      }
+    // Reported once for the deck rather than once per slide. The same sentence
+    // eleven times is noise an author scrolls past, and a starter deck begins
+    // with every slide titled by its step, so the tool would otherwise open by
+    // telling you off for titles it wrote itself.
+    const placeholders: number[] = [];
+    const authored: string[] = [];
+
+    visible.forEach((slide, index) => {
+      if (!('title' in slide) || typeof slide.title !== 'string') return;
+      const title = plainText(slide.title).trim();
+      if (!TOPIC_TITLES.has(title.toLowerCase().replace(/[.:]$/, ''))) return;
+      if (title === stepFor(methodology, slide.type)?.label) placeholders.push(index + 1);
+      else authored.push(`${index + 1}. "${title}"`);
+    });
+
+    if (placeholders.length > 0) {
+      add(
+        'note',
+        'conclusion-title',
+        `${placeholders.length} slide${placeholders.length === 1 ? '' : 's'} still carry the placeholder title ` +
+          `${methodology.name} gave them (${placeholders.join(', ')}). Replace each with the conclusion that slide reaches.`,
+      );
+    }
+    if (authored.length > 0) {
+      add(
+        'warning',
+        'conclusion-title',
+        `Titled with the topic rather than the finding: ${authored.join(', ')}. ` +
+          `"Gyms already pay $400/mo to stop churn" beats "Market".`,
+      );
     }
   }
 
@@ -449,7 +468,11 @@ function reviewSlide(slide: Slide): ReviewFinding[] {
 
     case 'team': {
       if (slide.people.length < 3) {
-        flag('note', 'framework:team', `${slide.people.length} people shown. Three to five is the working range.`);
+        flag(
+          'note',
+          'framework:team',
+          `${slide.people.length} ${slide.people.length === 1 ? 'person' : 'people'} shown. Three to five is the working range.`,
+        );
       }
       if (slide.people.length > 5) {
         flag('warning', 'framework:team', `${slide.people.length} people is a resume dump. Three to five, one line each.`);

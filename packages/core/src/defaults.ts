@@ -32,7 +32,7 @@ export function emptySlide(type: SlideType): Slide {
         ...base,
         type,
         title: 'The problem',
-        who: 'One customer, named. Not "everyone".',
+        who: 'Name one customer segment.',
         today: 'What they do about it today, badly.',
         cost: 'What that costs them, with a number.',
         worsening: 'Why it is getting worse.',

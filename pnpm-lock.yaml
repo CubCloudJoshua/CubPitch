@@ -30,6 +30,28 @@ importers:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@26.4.0)(vite@8.2.2(@types/node@26.4.0))
 
+  apps/cli:
+    dependencies:
+      '@cubpitch/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@cubpitch/export':
+        specifier: workspace:*
+        version: link:../../packages/export
+      '@cubpitch/render':
+        specifier: workspace:*
+        version: link:../../packages/render
+      '@cubpitch/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
+      '@cubpitch/theme':
+        specifier: workspace:*
+        version: link:../../packages/theme
+    devDependencies:
+      '@types/node':
+        specifier: ^26.4.0
+        version: 26.4.0
+
   packages/core:
     dependencies:
       zod:

@@ -1,10 +1,23 @@
 {
   "files": [],
   "references": [
-    { "path": "./packages/core" },
-    { "path": "./packages/theme" },
-    { "path": "./packages/render" },
-    { "path": "./packages/export" },
-    { "path": "./packages/storage" }
+    {
+      "path": "./packages/core"
+    },
+    {
+      "path": "./packages/theme"
+    },
+    {
+      "path": "./packages/render"
+    },
+    {
+      "path": "./packages/export"
+    },
+    {
+      "path": "./packages/storage"
+    },
+    {
+      "path": "./apps/cli"
+    }
   ]
 }

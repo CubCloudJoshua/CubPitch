@@ -1,0 +1,16 @@
+{
+  "name": "@cubpitch/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": { "cubpitch": "./dist/index.js" },
+  "scripts": { "build": "tsc -b", "start": "node ./dist/index.js" },
+  "dependencies": {
+    "@cubpitch/core": "workspace:*",
+    "@cubpitch/theme": "workspace:*",
+    "@cubpitch/render": "workspace:*",
+    "@cubpitch/export": "workspace:*",
+    "@cubpitch/storage": "workspace:*"
+  },
+  "devDependencies": { "@types/node": "^26.4.0" }
+}
