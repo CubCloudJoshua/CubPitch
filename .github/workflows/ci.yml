@@ -41,10 +41,19 @@ jobs:
           CUBPITCH_E2E: '1'
         run: pnpm test
 
+      # This one asserts: a type-scale change that clips realistic prose fails
+      # the build rather than shipping a deck with text cut off.
       - name: Check the sample deck still fits its canvas
         env:
           CUBPITCH_MEASURE: '1'
         run: pnpm test tests/_measure.test.ts
+
+      - name: Regenerate the example deck and check it is committed
+        env:
+          CUBPITCH_EXAMPLE: '1'
+        run: |
+          pnpm test tests/_example.test.ts
+          git diff --exit-code examples/
 
       - uses: actions/upload-artifact@v4
         if: always()

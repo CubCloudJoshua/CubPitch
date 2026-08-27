@@ -18,7 +18,7 @@ import { deckToPdf, deckToPptx, findOverflow } from '@cubpitch/export';
 import { renderDeckHtml } from '@cubpitch/render';
 import { getTheme, THEMES } from '@cubpitch/theme';
 import { FileDeckStore } from '@cubpitch/storage';
-import { cmdCritique, cmdDraft, cmdQa, explainModelError } from './ai-commands.js';
+import { cmdCritique, cmdDraft, cmdQa, cmdRewrite, explainModelError } from './ai-commands.js';
 import { flagBool, flagString, parseArgs, type ParsedArgs } from './args.js';
 import { accent, bold, dim, green, heading, red, table, yellow } from './ui.js';
 
@@ -67,6 +67,21 @@ async function main(): Promise<number> {
         const deck = await loadDeck(args);
         if (!deck) return 1;
         return cmdCritique(deck, aiContext(args), flagString(args, 'audience', '') || undefined);
+      });
+    case 'rewrite':
+      return withModel(args, async () => {
+        const deck = await loadDeck(args);
+        if (!deck) return 1;
+        const slide = Number(flagString(args, 'slide', ''));
+        if (!Number.isInteger(slide) || slide < 1) {
+          process.stderr.write('Which slide? Pass --slide <number>, as shown by `cubpitch review`.\n');
+          return 1;
+        }
+        return cmdRewrite(deck, aiContext(args), {
+          slide,
+          instruction: flagString(args, 'instruction', '') || undefined,
+          dryRun: flagBool(args, 'dry-run'),
+        });
       });
     case 'qa':
       return withModel(args, async () => {
@@ -382,6 +397,7 @@ ${heading('Commands')}
 ${dim('These call a model and need ANTHROPIC_API_KEY:')}
   draft <brief>          Draft a deck from a brief
   critique <deck>        Read the deck as a partner would
+  rewrite <deck>         Rewrite one slide (--slide N, --instruction, --dry-run)
   qa <deck>              The questions they will ask, and the answers you have
 
 ${heading('Options')}
@@ -396,6 +412,9 @@ ${heading('Options')}
   --company <name>       Company name (draft)
   --audience <text>      Who is reading (critique, qa)
   --guidance <text>      Extra direction for the drafter
+  --slide <n>            Which slide to rewrite
+  --instruction <text>   What to change: "tighter", "lead with the number"
+  --dry-run              Show the rewrite without saving it
   --model <id>           Override the model
 
 ${heading('Examples')}
@@ -404,6 +423,7 @@ ${heading('Examples')}
   cubpitch export ./decks/dck_a1b2c3/deck.json --out ./out
   cubpitch draft brief.md --company "CubCloud" --methodology house
   cubpitch critique dck_a1b2c3 --audience "Healthcare seed fund"
+  cubpitch rewrite dck_a1b2c3 --slide 5 --instruction "lead with the number"
   cubpitch qa dck_a1b2c3 --out ./qa-prep.md
 `,
   );

@@ -1,6 +1,6 @@
 import { writeFile } from 'node:fs/promises';
-import { critiqueDeck, draftDeck, prepareQa, AnthropicProvider, ModelError } from '@cubpitch/ai';
-import { reviewDeck, slideTitle, type Deck } from '@cubpitch/core';
+import { critiqueDeck, draftDeck, prepareQa, rewriteSlide, AnthropicProvider, ModelError } from '@cubpitch/ai';
+import { reviewDeck, slideTitle, visibleSlides, type Deck } from '@cubpitch/core';
 import { FileDeckStore } from '@cubpitch/storage';
 import { readFile } from 'node:fs/promises';
 import { accent, bold, dim, green, heading, red, yellow } from './ui.js';
@@ -116,6 +116,73 @@ export async function cmdQa(deck: Deck, context: AiContext, options: { audience?
     await writeFile(options.out, `${lines.join('\n')}\n`, 'utf8');
     process.stdout.write(`\n${green('Wrote')} ${options.out}\n`);
   }
+  return 0;
+}
+
+/**
+ * Rewrite one slide, in place.
+ *
+ * Takes a slide number as shown by `review`, because nobody reads slide ids off
+ * a terminal. The rewrite is written back to the store only if something
+ * actually changed, and the before and after are printed so the author can undo
+ * it with a version restore if they disagree.
+ */
+export async function cmdRewrite(
+  deck: Deck,
+  context: AiContext,
+  options: { slide: number; instruction?: string; dryRun: boolean },
+): Promise<number> {
+  const slides = visibleSlides(deck);
+  const target = slides[options.slide - 1];
+  if (!target) {
+    process.stderr.write(`No slide ${options.slide}. This deck has ${slides.length}.\n`);
+    return 1;
+  }
+
+  process.stdout.write(`${dim('Rewriting')} ${bold(`${options.slide}. ${slideTitle(target)}`)}\n\n`);
+
+  const result = await rewriteSlide(provider(context), {
+    deck,
+    slideId: target.id,
+    ...(options.instruction ? { instruction: options.instruction } : {}),
+  });
+
+  const before = target as unknown as Record<string, unknown>;
+  const after = result.slide as unknown as Record<string, unknown>;
+  const skip = new Set(['id', 'type', 'notes', 'hidden']);
+  const changed = Object.keys(after).filter(
+    (key) => !skip.has(key) && typeof after[key] === 'string' && after[key] !== before[key],
+  );
+
+  if (changed.length === 0) {
+    process.stdout.write(`${green('Nothing changed.')} ${dim(result.rationale)}\n`);
+    return 0;
+  }
+
+  process.stdout.write(`${dim(result.rationale)}\n\n`);
+  for (const key of changed) {
+    process.stdout.write(`${heading(key)}\n`);
+    process.stdout.write(`  ${red('-')} ${dim(String(before[key] ?? '') || '(empty)')}\n`);
+    process.stdout.write(`  ${green('+')} ${String(after[key])}\n\n`);
+  }
+
+  if (result.needed.length > 0) {
+    process.stdout.write(`${heading('It needed')}\n`);
+    for (const item of result.needed) process.stdout.write(`  ${yellow('·')} ${item}\n`);
+    process.stdout.write('\n');
+  }
+  if (result.ignored.length > 0) {
+    process.stdout.write(`${dim(`Ignored fields the slide does not have: ${result.ignored.join(', ')}`)}\n\n`);
+  }
+
+  if (options.dryRun) {
+    process.stdout.write(`${dim('Dry run. Nothing was written.')}\n`);
+    return 0;
+  }
+
+  const store = new FileDeckStore({ root: context.storeRoot });
+  await store.put(result.deck, { note: `rewrote slide ${options.slide}` });
+  process.stdout.write(`${green('Saved.')} ${dim('The previous version is in the deck history.')}\n`);
   return 0;
 }
 

@@ -110,6 +110,7 @@ node apps/cli/dist/index.js export examples/cubcloud-seed.json --out ./out
 | `themes` | Themes available |
 | `draft <brief>` | Draft a deck from a brief (needs `ANTHROPIC_API_KEY`) |
 | `critique <deck>` | Read the deck as a partner would |
+| `rewrite <deck>` | Rewrite one slide (`--slide N`, `--instruction`, `--dry-run`) |
 | `qa <deck>` | The questions they will ask, and the answers the deck supports |
 
 ---
