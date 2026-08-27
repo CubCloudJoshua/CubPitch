@@ -114,3 +114,37 @@ describe('PowerPoint export', () => {
     expect(Number(cy) / 914400).toBeCloseTo(7.5, 2);
   });
 });
+
+describe('PowerPoint content loss', () => {
+  it('draws a positioning chart instead of dropping the slide', async () => {
+    // The web renderer and the PDF both draw the quadrant. PowerPoint used to
+    // skip it, which is the worst kind of export bug: the file opens fine and
+    // the slide is empty.
+    const deck = sampleDeck();
+    const competition = deck.slides.find((slide) => slide.type === 'competition')!;
+    const withQuadrant = {
+      ...deck,
+      slides: deck.slides.map((slide) =>
+        slide.id === competition.id
+          ? {
+              ...slide,
+              matrix: undefined,
+              quadrant: {
+                xAxis: ['Off-premise', 'On-premise'] as [string, string],
+                yAxis: ['No audit trail', 'Audit trail'] as [string, string],
+                points: [
+                  { label: 'CubCloud', x: 0.82, y: 0.86, us: true },
+                  { label: 'Gov cloud', x: 0.3, y: 0.55, us: false },
+                ],
+              },
+            }
+          : slide,
+      ),
+    };
+
+    const xml = slideXml(openPptx(await deckToPptx(withQuadrant as typeof deck))).join('\n');
+    expect(xml).toContain('CubCloud');
+    expect(xml).toContain('Gov cloud');
+    expect(xml).toContain('On-premise');
+  });
+});

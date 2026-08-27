@@ -118,9 +118,9 @@ packages/
   ai/         Model provider abstraction, drafting, critique, objection prep
 apps/
   cli/        The cubpitch command
-  web/        Editor (not built yet)
+  web/        Editor: rail, canvas, inspector, review, presenter
 examples/     A complete worked deck
-tests/        70 tests
+tests/        96 tests
 ```
 
 Dependencies point one way:

@@ -135,7 +135,10 @@ export class FileDeckStore implements DeckStore {
     try {
       return parseDeck(JSON.parse(await readFile(path, 'utf8')));
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      const code = (error as NodeJS.ErrnoException).code;
+      // ENOENT: no deck there. ENOTDIR: a stray file such as .DS_Store sitting
+      // in the deck root, which is not a reason for `list` to throw.
+      if (code === 'ENOENT' || code === 'ENOTDIR') return null;
       throw error;
     }
   }

@@ -109,3 +109,21 @@ describe('file deck store', () => {
     expect(JSON.parse(raw).slides).toHaveLength(deck.slides.length);
   });
 });
+
+describe('file store robustness', () => {
+  it('ignores a stray file sitting in the deck root', async () => {
+    // A .DS_Store, a README, an editor swap file. Any of them used to make
+    // `list` throw ENOTDIR, which took out the deck picker and `cubpitch list`.
+    const root = mkdtempSync(join(tmpdir(), 'cubpitch-stray-'));
+    try {
+      const store = new FileDeckStore({ root });
+      await store.put(sampleDeck());
+      const { writeFileSync } = await import('node:fs');
+      writeFileSync(join(root, '.DS_Store'), 'junk');
+
+      await expect(store.list()).resolves.toHaveLength(1);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});

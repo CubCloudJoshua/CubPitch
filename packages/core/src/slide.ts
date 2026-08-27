@@ -56,7 +56,7 @@ function slideType<T extends string, S extends z.ZodRawShape>(type: T, shape: S)
  * refuses a deck whose one-liner is still a slogan.
  */
 export const CoverSlide = slideType('cover', {
-  headline: z.string().min(1),
+  headline: z.string().default(''),
   /** "We help [who] [do what] so they [get this]." A sentence, not a slogan. */
   oneLiner: InlineText.default(''),
   presenter: z.string().optional(),
@@ -68,7 +68,7 @@ export const CoverSlide = slideType('cover', {
 
 /** 2. Problem. The pain is specific, expensive, and already being paid for badly. */
 export const ProblemSlide = slideType('problem', {
-  title: z.string().min(1),
+  title: z.string().default(''),
   /** One customer, by name or tight segment. Never "everyone". */
   who: InlineText.default(''),
   /** What they do about it today, badly. */
@@ -83,7 +83,7 @@ export const ProblemSlide = slideType('problem', {
 
 /** 3. Solution. One picture of the product doing the job. Not a feature list. */
 export const SolutionSlide = slideType('solution', {
-  title: z.string().min(1),
+  title: z.string().default(''),
   /** The job you take off their plate. */
   lead: InlineText.default(''),
   before: InlineText.default(''),
@@ -100,7 +100,7 @@ export const SolutionSlide = slideType('solution', {
  * investors read twice, so it is a first-class type rather than a bullet list.
  */
 export const WhyNowSlide = slideType('whyNow', {
-  title: z.string().min(1),
+  title: z.string().default(''),
   /** The shift: compute cost, buyer behaviour, regulation, a tool that got cheap. */
   shift: InlineText.default(''),
   /** Why incumbents are slow to answer it. */
@@ -117,20 +117,20 @@ export const WhyNowSlide = slideType('whyNow', {
  * last, and is the only field that carries a source requirement.
  */
 export const MarketSlide = slideType('market', {
-  title: z.string().min(1),
+  title: z.string().default(''),
   lead: InlineText.default(''),
   /** Who writes a check in the next twelve months. */
   beachhead: Beachhead.optional(),
   /** Adjacent buyers, after the beachhead is real. */
-  expansion: z.array(z.object({ segment: z.string().min(1), note: InlineText.default('') })).default([]),
+  expansion: z.array(z.object({ segment: z.string().default(''), note: InlineText.default('') })).default([]),
   /** The big number. Only earns its place when the path above is honest. */
-  broader: z.object({ value: z.string().min(1), label: z.string().min(1) }).optional(),
+  broader: z.object({ value: z.string().default(''), label: z.string().default('') }).optional(),
   source: z.string().optional(),
 });
 
 /** 6. Product. Deep enough that a sharp person believes you can build it. */
 export const ProductSlide = slideType('product', {
-  title: z.string().min(1),
+  title: z.string().default(''),
   lead: InlineText.default(''),
   /** One core workflow, step by step. */
   workflow: z.array(Step).default([]),
@@ -143,7 +143,7 @@ export const ProductSlide = slideType('product', {
 
 /** 7. Traction. Proof the world wants this, typed by strength. */
 export const TractionSlide = slideType('traction', {
-  title: z.string().min(1),
+  title: z.string().default(''),
   lead: InlineText.default(''),
   evidence: z.array(Evidence).default([]),
   chart: ChartSpec.optional(),
@@ -151,7 +151,7 @@ export const TractionSlide = slideType('traction', {
 
 /** 8. Business model. Who pays, what they pay, how often, what it costs to deliver. */
 export const BusinessModelSlide = slideType('businessModel', {
-  title: z.string().min(1),
+  title: z.string().default(''),
   lead: InlineText.default(''),
   streams: z.array(RevenueStream).default([]),
   /** Rough is fine. Absent is not. */
@@ -162,7 +162,7 @@ export const BusinessModelSlide = slideType('businessModel', {
 
 /** 9. Go to market. The first 100 customers, not a brand campaign. */
 export const GoToMarketSlide = slideType('goToMarket', {
-  title: z.string().min(1),
+  title: z.string().default(''),
   lead: InlineText.default(''),
   motion: GoToMarketMotion.default('founder-led'),
   whoSells: InlineText.default(''),
@@ -176,7 +176,7 @@ export const GoToMarketSlide = slideType('goToMarket', {
 
 /** 10. Competition. Why the customer you named picks you. */
 export const CompetitionSlide = slideType('competition', {
-  title: z.string().min(1),
+  title: z.string().default(''),
   lead: InlineText.default(''),
   /** Spreadsheets, a VA, doing nothing. The competitor most decks omit. */
   statusQuo: InlineText.default(''),
@@ -189,7 +189,7 @@ export const CompetitionSlide = slideType('competition', {
 
 /** 11. Team. Why this group ships this, not a resume dump. */
 export const TeamSlide = slideType('team', {
-  title: z.string().min(1),
+  title: z.string().default(''),
   lead: InlineText.default(''),
   people: z.array(Person).default([]),
   /** Who is missing. Saying it is a strength, not an admission. */
@@ -202,8 +202,8 @@ export const TeamSlide = slideType('team', {
 
 /** 12. The ask. A number and an eighteen-month outcome. */
 export const AskSlide = slideType('ask', {
-  title: z.string().min(1),
-  amount: z.string().min(1),
+  title: z.string().default(''),
+  amount: z.string().default(''),
   instrument: z.string().default(''),
   lead: InlineText.default(''),
   /** What it buys: hire, build, sell. In dollars. */
@@ -218,11 +218,11 @@ export const AskSlide = slideType('ask', {
 
 export const AgendaSlide = slideType('agenda', {
   title: z.string().default('Agenda'),
-  items: z.array(z.string()).min(1),
+  items: z.array(z.string()).default([]),
 });
 
 export const SectionSlide = slideType('section', {
-  title: z.string().min(1),
+  title: z.string().default(''),
   subtitle: InlineText.default(''),
   index: z.number().int().positive().optional(),
   variant: z.enum(['section', 'appendix']).default('section'),
@@ -235,31 +235,31 @@ export const StatementSlide = slideType('statement', {
 });
 
 export const HowItWorksSlide = slideType('howItWorks', {
-  title: z.string().min(1),
+  title: z.string().default(''),
   lead: InlineText.default(''),
-  steps: z.array(Step).min(2),
+  steps: z.array(Step).default([]),
 });
 
 export const MetricsSlide = slideType('metrics', {
-  title: z.string().min(1),
+  title: z.string().default(''),
   period: z.string().optional(),
-  stats: z.array(Stat).min(1),
+  stats: z.array(Stat).default([]),
 });
 
 export const MoatSlide = slideType('moat', {
-  title: z.string().min(1),
+  title: z.string().default(''),
   lead: InlineText.default(''),
-  pillars: z.array(Pillar).min(1),
+  pillars: z.array(Pillar).default([]),
 });
 
 export const RoadmapSlide = slideType('roadmap', {
-  title: z.string().min(1),
+  title: z.string().default(''),
   lead: InlineText.default(''),
-  phases: z.array(Phase).min(1),
+  phases: z.array(Phase).default([]),
 });
 
 export const FinancialsSlide = slideType('financials', {
-  title: z.string().min(1),
+  title: z.string().default(''),
   lead: InlineText.default(''),
   table: TableSpec.optional(),
   chart: ChartSpec.optional(),
@@ -267,29 +267,29 @@ export const FinancialsSlide = slideType('financials', {
 });
 
 export const UseOfFundsSlide = slideType('useOfFunds', {
-  title: z.string().min(1),
+  title: z.string().default(''),
   lead: InlineText.default(''),
   total: z.string().optional(),
   runway: z.string().optional(),
-  allocations: z.array(Allocation).min(1),
+  allocations: z.array(Allocation).default([]),
 });
 
 export const LogosSlide = slideType('logos', {
-  title: z.string().min(1),
+  title: z.string().default(''),
   lead: InlineText.default(''),
-  logos: z.array(LogoItem).min(1),
+  logos: z.array(LogoItem).default([]),
 });
 
 export const QuoteSlide = slideType('quote', {
   text: InlineText,
-  author: z.string().min(1),
+  author: z.string().default(''),
   role: z.string().optional(),
   org: z.string().optional(),
   photo: MediaRef.optional(),
 });
 
 export const ClosingSlide = slideType('closing', {
-  headline: z.string().min(1),
+  headline: z.string().default(''),
   subhead: InlineText.default(''),
   contactName: z.string().optional(),
   email: z.string().optional(),
@@ -298,9 +298,9 @@ export const ClosingSlide = slideType('closing', {
 });
 
 export const BulletsSlide = slideType('bullets', {
-  title: z.string().min(1),
+  title: z.string().default(''),
   lead: InlineText.default(''),
-  bullets: z.array(Bullet).min(1),
+  bullets: z.array(Bullet).default([]),
 });
 
 export const ImageSlide = slideType('image', {

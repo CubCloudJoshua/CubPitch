@@ -279,6 +279,16 @@ export function reviewDeck(deck: Deck): DeckReview {
     }
   }
 
+  // --- Empty slides ---------------------------------------------------------
+
+  // The schema lets a slide be empty so the editor can hold one mid-edit.
+  // Saying so is this function's job.
+  for (const slide of visible) {
+    if (slideProse(slide).every((value) => plainText(value).trim() === '')) {
+      add('warning', 'structure', 'This slide has no content on it.', slide.id);
+    }
+  }
+
   // --- Per-slide checks -----------------------------------------------------
 
   for (const slide of visible) findings.push(...reviewSlide(slide));
@@ -459,7 +469,11 @@ function reviewSlide(slide: Slide): ReviewFinding[] {
       if (slide.quadrant) {
         const us = slide.quadrant.points.filter((point) => point.us);
         const topRight = slide.quadrant.points.filter((point) => point.x > 0.6 && point.y > 0.6);
-        if (us.length > 0 && topRight.length === us.length) {
+        // Membership, not count: a chart with one competitor up there and us
+        // elsewhere has the same two totals and is not the thing being warned
+        // about.
+        const aloneUpThere = topRight.length > 0 && topRight.every((point) => point.us);
+        if (us.length > 0 && aloneUpThere) {
           flag('note', 'framework:competition', 'You are alone in the top right. Only ship that if it is true and obvious.');
         }
       }

@@ -156,8 +156,29 @@ describe('drafting', () => {
   it('rejects an answer that does not fit the deck schema', async () => {
     // The provider parses against the schema, so a bad draft fails loudly
     // rather than producing a deck with an undefined field in it.
-    const provider = new FakeProvider([{ slides: [{ type: 'problem' }], assumptions: [], missing: [] }]);
+    const provider = new FakeProvider([
+      { slides: [{ type: 'not_a_slide_type', title: 'x' }], assumptions: [], missing: [] },
+    ]);
     await expect(draftDeck(provider, { brief: 'x', company: 'CubCloud' })).rejects.toThrow();
+  });
+
+  it('rejects a field of the wrong shape', async () => {
+    const provider = new FakeProvider([
+      { slides: [{ type: 'traction', title: 'x', evidence: 'not an array' }], assumptions: [], missing: [] },
+    ]);
+    await expect(draftDeck(provider, { brief: 'x', company: 'CubCloud' })).rejects.toThrow();
+  });
+
+  it('accepts a sparse slide and lets review say it is empty', async () => {
+    // A drafter told not to invent will return near-empty slides for a thin
+    // brief. That has to be a deck the author can open and fill in, not an
+    // error, and the review is what points at the gaps.
+    const provider = new FakeProvider([{ slides: [{ type: 'problem' }], assumptions: [], missing: ['Everything'] }]);
+    const result = await draftDeck(provider, { brief: 'x', company: 'CubCloud' });
+
+    expect(result.deck.slides).toHaveLength(1);
+    const messages = reviewDeck(result.deck).findings.map((finding) => finding.message);
+    expect(messages.some((message) => /no content/i.test(message))).toBe(true);
   });
 });
 

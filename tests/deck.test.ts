@@ -88,3 +88,42 @@ describe('deck operations', () => {
     expect(() => parseDeck({ ...deck, schemaVersion: 99 })).toThrow(/newer version/i);
   });
 });
+
+describe('a deck stays saveable while it is being edited', () => {
+  it('accepts a slide whose title the author just cleared', () => {
+    // A required title meant that selecting a title and deleting it, before
+    // typing the new one, produced a deck the server rejected with 422. The
+    // editor's autosave then failed silently and kept accepting keystrokes.
+    const deck = starterDeck({ title: 'Seed', company });
+    const problem = deck.slides.find((slide) => slide.type === 'problem')!;
+    const cleared = updateSlide(deck, problem.id, { title: '' });
+    expect(() => parseDeck(JSON.parse(JSON.stringify(cleared)))).not.toThrow();
+  });
+
+  it('accepts the blank row that adding a list item produces', () => {
+    const deck = starterDeck({ title: 'Seed', company });
+    const team = deck.slides.find((slide) => slide.type === 'team')!;
+    const withBlank = updateSlide(deck, team.id, {
+      people: [{ name: '', role: '', scar: '', credentials: [] }],
+    });
+    expect(() => parseDeck(JSON.parse(JSON.stringify(withBlank)))).not.toThrow();
+  });
+
+  it('accepts a list the author emptied', () => {
+    const deck = starterDeck({ title: 'Seed', company });
+    const withBullets = addSlide(deck, 'bullets');
+    const bullets = withBullets.slides.at(-1)!;
+    const emptied = updateSlide(withBullets, bullets.id, { bullets: [] });
+    expect(() => parseDeck(JSON.parse(JSON.stringify(emptied)))).not.toThrow();
+  });
+
+  it('but review says so, since the schema no longer does', async () => {
+    const { reviewDeck } = await import('@cubpitch/core');
+    const deck = starterDeck({ title: 'Seed', company });
+    const problem = deck.slides.find((slide) => slide.type === 'problem')!;
+    const blanked = updateSlide(deck, problem.id, { title: '', who: '', today: '', cost: '', worsening: '' });
+
+    const messages = reviewDeck(blanked).findings.map((finding) => finding.message);
+    expect(messages.some((message) => /no content/i.test(message))).toBe(true);
+  });
+});

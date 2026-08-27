@@ -45,6 +45,8 @@ export function useDeck(deckId: string | null): DeckEditor {
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  /** The deck the callbacks act on, so they never need a state updater. */
+  const latest = useRef<Deck | null>(null);
   const past = useRef<Deck[]>([]);
   const future = useRef<Deck[]>([]);
   /** The updatedAt the server last confirmed, for conflict detection. */
@@ -58,6 +60,7 @@ export function useDeck(deckId: string | null): DeckEditor {
     future.current = [];
     baseline.current = loaded.updatedAt;
     pending.current = null;
+    latest.current = loaded;
     setDeck(loaded);
     setSaveState('idle');
     setSaveError(null);
@@ -65,6 +68,7 @@ export function useDeck(deckId: string | null): DeckEditor {
 
   useEffect(() => {
     if (!deckId) {
+      latest.current = null;
       setDeck(null);
       return;
     }
@@ -107,42 +111,53 @@ export function useDeck(deckId: string | null): DeckEditor {
     [flush],
   );
 
+  /**
+   * History and save scheduling live outside the state updater.
+   *
+   * React invokes an updater twice under StrictMode, and it may re-run one at
+   * any time. Mutating the history refs or scheduling a save from inside it
+   * therefore duplicated undo entries and queued the save twice. The current
+   * deck is tracked in a ref alongside the state so these can read it without
+   * an updater.
+   */
   const apply = useCallback(
     (change: (deck: Deck) => Deck) => {
-      setDeck((current) => {
-        if (!current) return current;
-        const next = change(current);
-        if (next === current) return current;
+      const current = latest.current;
+      if (!current) return;
+      const next = change(current);
+      if (next === current) return;
 
-        past.current = [...past.current.slice(-HISTORY_LIMIT), current];
-        future.current = [];
-        schedule(next);
-        return next;
-      });
+      past.current = [...past.current.slice(-HISTORY_LIMIT), current];
+      future.current = [];
+      latest.current = next;
+      setDeck(next);
+      schedule(next);
     },
     [schedule],
   );
 
   const undo = useCallback(() => {
-    setDeck((current) => {
-      const previous = past.current.at(-1);
-      if (!current || !previous) return current;
-      past.current = past.current.slice(0, -1);
-      future.current = [...future.current, current];
-      schedule(previous);
-      return previous;
-    });
+    const current = latest.current;
+    const previous = past.current.at(-1);
+    if (!current || !previous) return;
+
+    past.current = past.current.slice(0, -1);
+    future.current = [...future.current, current];
+    latest.current = previous;
+    setDeck(previous);
+    schedule(previous);
   }, [schedule]);
 
   const redo = useCallback(() => {
-    setDeck((current) => {
-      const next = future.current.at(-1);
-      if (!current || !next) return current;
-      future.current = future.current.slice(0, -1);
-      past.current = [...past.current, current];
-      schedule(next);
-      return next;
-    });
+    const current = latest.current;
+    const next = future.current.at(-1);
+    if (!current || !next) return;
+
+    future.current = future.current.slice(0, -1);
+    past.current = [...past.current, current];
+    latest.current = next;
+    setDeck(next);
+    schedule(next);
   }, [schedule]);
 
   const saveNow = useCallback(async () => {

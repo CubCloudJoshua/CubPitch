@@ -60,6 +60,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@cubpitch/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@cubpitch/core':
         specifier: workspace:*
         version: link:../../packages/core

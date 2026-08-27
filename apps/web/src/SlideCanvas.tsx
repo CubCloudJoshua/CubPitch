@@ -13,21 +13,28 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
  */
 
 /**
- * The deck's theme stylesheet, injected once per theme.
+ * The deck's theme stylesheet.
  *
  * The slide CSS is written for a whole document (it sets `@page` and styles
  * `.cp-slide` globally), so it is mounted as a real stylesheet rather than
- * scoped. Keying by theme id means switching themes swaps one tag.
+ * scoped. There is exactly one tag and its contents are replaced: appending a
+ * tag per theme left every previously-used sheet in the document, and since
+ * they all style the same selectors the last one appended won. Switching to a
+ * theme you had already tried rendered the canvas in the wrong one while the
+ * export used the right one.
  */
+const THEME_STYLE_ID = 'cp-theme';
+
 function useThemeStylesheet(themeId: string): void {
   useLayoutEffect(() => {
-    const id = `cp-theme-${themeId}`;
-    if (document.getElementById(id)) return;
-
-    const style = document.createElement('style');
-    style.id = id;
-    style.textContent = slideCss(getTheme(themeId));
-    document.head.append(style);
+    const css = slideCss(getTheme(themeId));
+    let style = document.getElementById(THEME_STYLE_ID);
+    if (!style) {
+      style = document.createElement('style');
+      style.id = THEME_STYLE_ID;
+      document.head.append(style);
+    }
+    if (style.textContent !== css) style.textContent = css;
   }, [themeId]);
 }
 

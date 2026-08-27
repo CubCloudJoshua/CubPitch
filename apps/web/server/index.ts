@@ -4,6 +4,7 @@ import { extname, join, normalize, resolve } from 'node:path';
 import { parseDeck, reviewDeck, starterDeck, type Deck } from '@cubpitch/core';
 import { deckToPdf, deckToPptx, findOverflow } from '@cubpitch/export';
 import { ConcurrentWriteError, DeckNotFoundError, FileDeckStore } from '@cubpitch/storage';
+import { AnthropicProvider, critiqueDeck, draftDeck, ModelError, prepareQa } from '@cubpitch/ai';
 
 /**
  * The editor's API.
@@ -19,6 +20,33 @@ const ROOT = resolve(process.env['CUBPITCH_HOME'] ?? join(process.cwd(), 'decks'
 const STATIC_DIR = resolve(process.env['CUBPITCH_STATIC'] ?? join(import.meta.dirname, '..', 'dist'));
 
 const store = new FileDeckStore({ root: ROOT });
+
+/**
+ * The model provider is built on first use, not at boot.
+ *
+ * Everything except three routes works without an API key, and a server that
+ * refuses to start because one is missing would stop someone reviewing a deck
+ * over something they were not trying to do.
+ */
+let cachedProvider: AnthropicProvider | null = null;
+function modelProvider(): AnthropicProvider {
+  cachedProvider ??= new AnthropicProvider();
+  return cachedProvider;
+}
+
+/** Model failures are ordinary here: no key, rate limit, an unparseable answer. */
+async function withModel(response: ServerResponse, run: () => Promise<unknown>): Promise<void> {
+  try {
+    send(response, 200, await run());
+  } catch (error) {
+    if (error instanceof ModelError) {
+      // 503 when a retry could help, 502 when it could not. Either way the
+      // editor shows the sentence rather than a stack trace.
+      return send(response, error.retryable ? 503 : 502, { error: error.message, retryable: error.retryable });
+    }
+    throw error;
+  }
+}
 
 type Handler = (
   request: IncomingMessage,
@@ -126,6 +154,39 @@ route('GET', '/api/decks/:id/layout', async (_request, response, params) => {
   } catch (error) {
     send(response, 503, { error: (error as Error).message });
   }
+});
+
+route('POST', '/api/ai/draft', async (request, response) => {
+  const body = await readJson<{ brief?: string; company?: string; methodologyId?: string; themeId?: string; guidance?: string }>(
+    request,
+  );
+  if (!body.brief || !body.company) return send(response, 400, { error: 'brief and company are required' });
+
+  await withModel(response, async () => {
+    const result = await draftDeck(modelProvider(), {
+      brief: body.brief!,
+      company: body.company!,
+      ...(body.methodologyId ? { methodologyId: body.methodologyId } : {}),
+      ...(body.themeId ? { themeId: body.themeId } : {}),
+      ...(body.guidance ? { guidance: body.guidance } : {}),
+    });
+    const saved = await store.put(result.deck, { note: 'drafted' });
+    return { deck: saved, assumptions: result.assumptions, missing: result.missing };
+  });
+});
+
+route('POST', '/api/decks/:id/critique', async (request, response, params) => {
+  const deck = await store.get(params['id']!);
+  if (!deck) return send(response, 404, { error: 'No such deck' });
+  const body = await readJson<{ audience?: string }>(request).catch(() => ({}) as { audience?: string });
+  await withModel(response, () => critiqueDeck(modelProvider(), { deck, ...(body.audience ? { audience: body.audience } : {}) }));
+});
+
+route('POST', '/api/decks/:id/qa', async (request, response, params) => {
+  const deck = await store.get(params['id']!);
+  if (!deck) return send(response, 404, { error: 'No such deck' });
+  const body = await readJson<{ audience?: string }>(request).catch(() => ({}) as { audience?: string });
+  await withModel(response, () => prepareQa(modelProvider(), { deck, ...(body.audience ? { audience: body.audience } : {}) }));
 });
 
 route('GET', '/api/decks/:id/export.pdf', async (_request, response, params) => {

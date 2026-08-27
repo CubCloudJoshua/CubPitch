@@ -17,6 +17,7 @@ import {
 import { THEMES } from '@cubpitch/theme';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, type DeckSummary, type OverflowFinding } from './api.js';
+import { Coach } from './Coach.js';
 import { Inspector } from './Inspector.js';
 import { FittedSlide, Presenter, SlideCanvas } from './SlideCanvas.js';
 import { useDeck, type SaveState } from './useDeck.js';
@@ -146,6 +147,7 @@ function Editor({ deckId, onClose }: { deckId: string; onClose: () => void }): R
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showReview, setShowReview] = useState(false);
+  const [showCoach, setShowCoach] = useState(false);
   const [presenting, setPresenting] = useState(false);
   const [overflow, setOverflow] = useState<OverflowFinding[] | null>(null);
 
@@ -225,6 +227,13 @@ function Editor({ deckId, onClose }: { deckId: string; onClose: () => void }): R
 
   const download = async (format: 'pdf' | 'pptx'): Promise<void> => {
     await editor.saveNow();
+    // The server exports what it has stored. Downloading after a failed save
+    // would hand the author a file that is missing their last edits, or is
+    // somebody else's deck entirely.
+    if (editor.saveState === 'conflict' || editor.saveState === 'error') {
+      window.alert(`Not exporting: your last change did not save.\n\n${editor.saveError ?? ''}`);
+      return;
+    }
     window.location.href = api.exportUrl(deck.id, format);
   };
 
@@ -277,8 +286,24 @@ function Editor({ deckId, onClose }: { deckId: string; onClose: () => void }): R
         <button className="btn btn--icon" onClick={editor.redo} disabled={!editor.canRedo} title="Redo">
           ↷
         </button>
-        <button className={`btn ${review && review.errors > 0 ? 'btn--accent' : ''}`} onClick={() => setShowReview((open) => !open)}>
+        <button
+          className={`btn ${review && review.errors > 0 ? 'btn--accent' : ''}`}
+          onClick={() => {
+            setShowCoach(false);
+            setShowReview((open) => !open);
+          }}
+        >
           Review {review ? `· ${review.findings.length}` : ''}
+        </button>
+        <button
+          className="btn"
+          onClick={() => {
+            setShowReview(false);
+            setShowCoach((open) => !open);
+          }}
+          title="Critique and question prep. Calls a model."
+        >
+          Coach
         </button>
         <button className="btn" onClick={() => setPresenting(true)}>
           Present
@@ -314,7 +339,13 @@ function Editor({ deckId, onClose }: { deckId: string; onClose: () => void }): R
               >
                 <span className="rail__number">{index + 1}</span>
                 {worst ? <span className={`rail__flag rail__flag--${worst}`} /> : null}
-                <SlideCanvas deck={deck} slide={slide} width={210} number={index + 1} total={visible.length} />
+                <SlideCanvas
+                  deck={deck}
+                  slide={slide}
+                  width={210}
+                  number={Math.max(visible.findIndex((entry) => entry.id === slide.id) + 1, 1)}
+                  total={visible.length}
+                />
                 <p className="rail__caption">{slideTitle(slide) || SLIDE_LABELS[slide.type]}</p>
               </div>
             );
@@ -406,6 +437,17 @@ function Editor({ deckId, onClose }: { deckId: string; onClose: () => void }): R
           onSelect={(slideId) => {
             setSelectedId(slideId);
             setShowReview(false);
+          }}
+        />
+      ) : null}
+
+      {showCoach ? (
+        <Coach
+          deck={deck}
+          onClose={() => setShowCoach(false)}
+          onSelectSlide={(slideId) => {
+            setSelectedId(slideId);
+            setShowCoach(false);
           }}
         />
       ) : null}

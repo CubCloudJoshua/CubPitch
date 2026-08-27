@@ -536,6 +536,8 @@ function drawSlide(ctx: Ctx, slide: Slide): void {
       }
       if (slide.matrix) {
         drawMatrix(ctx, layout, slide.matrix);
+      } else if (slide.quadrant) {
+        drawQuadrant(ctx, layout, slide.quadrant);
       } else if (slide.alternatives.length > 0) {
         const box = layout.take(340);
         rows(
@@ -913,4 +915,57 @@ function drawMatrix(ctx: Ctx, layout: SlideLayout, matrix: NonNullable<Extract<S
     valign: 'middle',
     margin: 10,
   });
+}
+
+/**
+ * The 2x2, as real shapes.
+ *
+ * Drawn rather than skipped: the web renderer and the PDF both show it, and a
+ * PowerPoint export that quietly omits the slide's only content is the worst
+ * kind of export bug, because the file opens fine.
+ */
+function drawQuadrant(
+  ctx: Ctx,
+  layout: SlideLayout,
+  quadrant: NonNullable<Extract<Slide, { type: 'competition' }>['quadrant']>,
+): void {
+  const box = layout.take(420);
+  const size = Math.min(box.h, 420);
+  const originX = box.x;
+  const originY = box.y;
+
+  const axis = (from: Box): void => {
+    ctx.slide.addShape('rect', {
+      ...inches(from),
+      fill: { color: hex(ctx.theme.colors.border) },
+      line: { color: hex(ctx.theme.colors.border), width: 0 },
+    });
+  };
+  axis({ x: originX + size / 2, y: originY, w: 2, h: size });
+  axis({ x: originX, y: originY + size / 2, w: size, h: 2 });
+
+  for (const point of quadrant.points) {
+    const radius = point.us ? 16 : 11;
+    const cx = originX + point.x * size - radius;
+    const cy = originY + (1 - point.y) * size - radius;
+    const color = point.us ? ctx.theme.colors.accent : ctx.theme.colors.inkMuted;
+
+    ctx.slide.addShape('ellipse', {
+      ...inches({ x: cx, y: cy, w: radius * 2, h: radius * 2 }),
+      fill: { color: hex(color) },
+      line: { color: hex(color), width: 0 },
+    });
+    text(
+      ctx,
+      point.label,
+      { x: cx + radius * 2 + 10, y: cy - 4, w: 380, h: 44 },
+      { ...ctx.type.small!, color: hex(point.us ? ctx.theme.colors.accentBright : ctx.theme.colors.inkMuted) },
+    );
+  }
+
+  const legendX = originX + size + 64;
+  label(ctx, 'Horizontal', { x: legendX, y: originY + 40, w: box.w - size - 64, h: 34 });
+  text(ctx, `${quadrant.xAxis[0]} to ${quadrant.xAxis[1]}`, { x: legendX, y: originY + 78, w: box.w - size - 64, h: 60 }, ctx.type.small!);
+  label(ctx, 'Vertical', { x: legendX, y: originY + 160, w: box.w - size - 64, h: 34 });
+  text(ctx, `${quadrant.yAxis[0]} to ${quadrant.yAxis[1]}`, { x: legendX, y: originY + 198, w: box.w - size - 64, h: 60 }, ctx.type.small!);
 }

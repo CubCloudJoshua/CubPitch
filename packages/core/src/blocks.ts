@@ -3,6 +3,15 @@ import { z } from 'zod';
 /**
  * Content primitives shared across slide types.
  *
+ * Authored strings and collections carry defaults rather than minimum lengths.
+ * That is deliberate and it is the same rule as everywhere else here: parsing
+ * decides whether a document is structurally legal, and review decides whether
+ * it is any good. A required name meant that adding a blank row, or clearing a
+ * title to retype it, produced a deck that would not save; the editor's autosave
+ * then failed silently and the author kept typing into something that was no
+ * longer being persisted. Emptiness is a normal state mid-edit, and it is
+ * `review.ts` that says so out loud.
+ *
  * A pitch deck is not a pile of text boxes. Every value on a slide has a
  * meaning the tool understands, which is what lets one deck be re-themed,
  * re-ordered, exported to PowerPoint as editable shapes, and critiqued later
@@ -37,8 +46,8 @@ export type MediaRef = z.infer<typeof MediaRef>;
 
 /** A headline number: "1,240", "$4.2M", "3.1x". Formatting is the author's. */
 export const Stat = z.object({
-  value: z.string().min(1),
-  label: z.string().min(1),
+  value: z.string().default(''),
+  label: z.string().default(''),
   /** Change indicator shown beside the value, e.g. "+180% YoY". */
   delta: z.string().optional(),
   trend: z.enum(['up', 'down', 'flat']).optional(),
@@ -48,7 +57,7 @@ export type Stat = z.infer<typeof Stat>;
 
 /** One of the three-to-four supporting ideas under a headline claim. */
 export const Pillar = z.object({
-  title: z.string().min(1),
+  title: z.string().default(''),
   body: InlineText.default(''),
   /** Short eyebrow above the title, e.g. "01" or "SOVEREIGN". */
   badge: z.string().optional(),
@@ -57,7 +66,7 @@ export const Pillar = z.object({
 export type Pillar = z.infer<typeof Pillar>;
 
 export const Step = z.object({
-  title: z.string().min(1),
+  title: z.string().default(''),
   body: InlineText.default(''),
 });
 export type Step = z.infer<typeof Step>;
@@ -76,8 +85,8 @@ export const ChartPoint = z.object({
 export type ChartPoint = z.infer<typeof ChartPoint>;
 
 export const ChartSeries = z.object({
-  name: z.string().min(1),
-  points: z.array(ChartPoint).min(1),
+  name: z.string().default(''),
+  points: z.array(ChartPoint).default([]),
 });
 export type ChartSeries = z.infer<typeof ChartSeries>;
 
@@ -86,7 +95,7 @@ export type ValueFormat = z.infer<typeof ValueFormat>;
 
 export const ChartSpec = z.object({
   kind: z.enum(['bar', 'stackedBar', 'line', 'area', 'donut']),
-  series: z.array(ChartSeries).min(1),
+  series: z.array(ChartSeries).default([]),
   format: ValueFormat.default('number'),
   currency: z.string().default('USD'),
   axisLabel: z.string().optional(),
@@ -111,15 +120,15 @@ export const TableRow = z.object({
 export type TableRow = z.infer<typeof TableRow>;
 
 export const TableSpec = z.object({
-  columns: z.array(TableColumn).min(1),
+  columns: z.array(TableColumn).default([]),
   rows: z.array(TableRow),
   source: z.string().optional(),
 });
 export type TableSpec = z.infer<typeof TableSpec>;
 
 export const Person = z.object({
-  name: z.string().min(1),
-  role: z.string().min(1),
+  name: z.string().default(''),
+  role: z.string().default(''),
   /**
    * The relevant scar, in one line: the thing this person has already survived
    * that makes them the one to do this. Not a resume line. "Ran the ERCOT
@@ -133,7 +142,7 @@ export const Person = z.object({
 export type Person = z.infer<typeof Person>;
 
 export const LogoItem = z.object({
-  name: z.string().min(1),
+  name: z.string().default(''),
   image: MediaRef.optional(),
   note: z.string().optional(),
 });
@@ -141,15 +150,15 @@ export type LogoItem = z.infer<typeof LogoItem>;
 
 export const Phase = z.object({
   /** Time handle: "Q4 2026", "Now", "Year 2". */
-  label: z.string().min(1),
-  title: z.string().min(1),
+  label: z.string().default(''),
+  title: z.string().default(''),
   items: z.array(z.string()).default([]),
   state: z.enum(['done', 'active', 'planned']).default('planned'),
 });
 export type Phase = z.infer<typeof Phase>;
 
 export const Allocation = z.object({
-  label: z.string().min(1),
+  label: z.string().default(''),
   percent: z.number().min(0).max(100),
   note: z.string().optional(),
 });
@@ -167,8 +176,8 @@ export type MatrixMark = z.infer<typeof MatrixMark>;
  * marketing, and every investor has seen that trick.
  */
 export const MatrixSpec = z.object({
-  competitors: z.array(z.string()).min(2),
-  capabilities: z.array(z.string()).min(1),
+  competitors: z.array(z.string()).default([]),
+  capabilities: z.array(z.string()).default([]),
   marks: z.array(z.array(MatrixMark)),
   usIndex: z.number().int().min(0),
 });
@@ -180,7 +189,7 @@ export const QuadrantSpec = z.object({
   yAxis: z.tuple([z.string(), z.string()]),
   points: z.array(
     z.object({
-      label: z.string().min(1),
+      label: z.string().default(''),
       x: z.number().min(0).max(1),
       y: z.number().min(0).max(1),
       us: z.boolean().default(false),
@@ -193,14 +202,14 @@ export type QuadrantSpec = z.infer<typeof QuadrantSpec>;
  *  stats are: "$4.1B" is an authored claim, not a computed one. */
 export const MarketTier = z.object({
   key: z.enum(['tam', 'sam', 'som']),
-  value: z.string().min(1),
-  label: z.string().min(1),
+  value: z.string().default(''),
+  label: z.string().default(''),
   note: z.string().optional(),
 });
 export type MarketTier = z.infer<typeof MarketTier>;
 
 export const RevenueStream = z.object({
-  name: z.string().min(1),
+  name: z.string().default(''),
   description: InlineText.default(''),
   price: z.string().optional(),
   share: z.number().min(0).max(100).optional(),
@@ -254,8 +263,8 @@ export const EVIDENCE_LABELS: Record<EvidenceKind, string> = {
 export const Evidence = z.object({
   kind: EvidenceKind,
   /** The number: "$41K MRR", "94% net revenue retention", "3 paid pilots". */
-  value: z.string().min(1),
-  label: z.string().min(1),
+  value: z.string().default(''),
+  label: z.string().default(''),
   /** Who, by name. The framework is blunt that names beat categories. */
   customer: z.string().optional(),
   note: z.string().optional(),
@@ -268,7 +277,7 @@ export function evidenceStrength(evidence: Evidence): number {
 
 /** The segment you can actually sell to this year. */
 export const Beachhead = z.object({
-  segment: z.string().min(1),
+  segment: z.string().default(''),
   /** How many buyers exist in it, named or counted. */
   buyerCount: z.string().default(''),
   /** What one of them pays. */
@@ -298,7 +307,7 @@ export const MOTION_LABELS: Record<GoToMarketMotion, string> = {
 
 /** One real alternative the named customer could pick instead. */
 export const Alternative = z.object({
-  name: z.string().min(1),
+  name: z.string().default(''),
   whatTheyDo: InlineText.default(''),
   /** Why the customer you named does not pick them. */
   whyNotThem: InlineText.default(''),
@@ -307,8 +316,8 @@ export type Alternative = z.infer<typeof Alternative>;
 
 /** A dollar-denominated line in the ask. "Vibes" is not a category. */
 export const FundUse = z.object({
-  label: z.string().min(1),
-  amount: z.string().min(1),
+  label: z.string().default(''),
+  amount: z.string().default(''),
   detail: InlineText.default(''),
 });
 export type FundUse = z.infer<typeof FundUse>;

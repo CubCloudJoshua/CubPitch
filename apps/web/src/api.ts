@@ -1,3 +1,4 @@
+import type { CritiqueResult, QaResult } from '@cubpitch/ai';
 import type { Deck, DeckReview } from '@cubpitch/core';
 
 /**
@@ -32,6 +33,17 @@ export class ConflictError extends Error {
   }
 }
 
+/** A model call failed. `retryable` decides whether the UI offers a retry. */
+export class ModelCallError extends Error {
+  constructor(
+    message: string,
+    readonly retryable: boolean,
+  ) {
+    super(message);
+    this.name = 'ModelCallError';
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
@@ -46,6 +58,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     const message = (body as { error?: string } | null)?.error ?? `${response.status} ${response.statusText}`;
     if (response.status === 409) throw new ConflictError(message);
+    if (response.status === 502 || response.status === 503) {
+      throw new ModelCallError(message, (body as { retryable?: boolean } | null)?.retryable ?? response.status === 503);
+    }
     throw new Error(message);
   }
   return body as T;
@@ -72,4 +87,16 @@ export const api = {
   layout: (id: string): Promise<OverflowFinding[]> => request(`/api/decks/${id}/layout`),
 
   exportUrl: (id: string, format: 'pdf' | 'pptx'): string => `/api/decks/${id}/export.${format}`,
+
+  draft: (input: { brief: string; company: string; methodologyId?: string; themeId?: string; guidance?: string }): Promise<{
+    deck: Deck;
+    assumptions: string[];
+    missing: string[];
+  }> => request('/api/ai/draft', { method: 'POST', body: JSON.stringify(input) }),
+
+  critique: (id: string, audience?: string): Promise<CritiqueResult> =>
+    request(`/api/decks/${id}/critique`, { method: 'POST', body: JSON.stringify({ audience }) }),
+
+  qa: (id: string, audience?: string): Promise<QaResult> =>
+    request(`/api/decks/${id}/qa`, { method: 'POST', body: JSON.stringify({ audience }) }),
 };
