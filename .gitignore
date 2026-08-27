@@ -1,0 +1,13 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+.env.local
+.next/
+out/
+coverage/
+decks/
+*.pptx
+*.pdf
+!examples/**/*.pdf
+.DS_Store

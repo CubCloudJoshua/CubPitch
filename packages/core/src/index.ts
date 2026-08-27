@@ -1,0 +1,11 @@
+export * from './blocks.js';
+export * from './slide.js';
+export * from './deck.js';
+export * from './ops.js';
+export * from './defaults.js';
+export * from './validate.js';
+export * from './review.js';
+export * from './methodology.js';
+export * from './text.js';
+export * from './ids.js';
+export { createDeck, starterDeck } from './create.js';
