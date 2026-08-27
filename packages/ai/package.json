@@ -1,0 +1,16 @@
+{
+  "name": "@cubpitch/ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "scripts": { "build": "tsc -b" },
+  "dependencies": {
+    "@cubpitch/core": "workspace:*",
+    "@anthropic-ai/sdk": "^0.75.0",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": { "@types/node": "^26.4.0" }
+}

@@ -1,12 +1,33 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "rootDir": "./src", "outDir": "./dist", "types": ["node"] },
-  "include": ["src/**/*"],
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "src/**/*"
+  ],
   "references": [
-    { "path": "../../packages/core" },
-    { "path": "../../packages/theme" },
-    { "path": "../../packages/render" },
-    { "path": "../../packages/export" },
-    { "path": "../../packages/storage" }
+    {
+      "path": "../../packages/core"
+    },
+    {
+      "path": "../../packages/theme"
+    },
+    {
+      "path": "../../packages/render"
+    },
+    {
+      "path": "../../packages/export"
+    },
+    {
+      "path": "../../packages/storage"
+    },
+    {
+      "path": "../../packages/ai"
+    }
   ]
 }

@@ -18,6 +18,7 @@ import { deckToPdf, deckToPptx, findOverflow } from '@cubpitch/export';
 import { renderDeckHtml } from '@cubpitch/render';
 import { getTheme, THEMES } from '@cubpitch/theme';
 import { FileDeckStore } from '@cubpitch/storage';
+import { cmdCritique, cmdDraft, cmdQa, explainModelError } from './ai-commands.js';
 import { flagBool, flagString, parseArgs, type ParsedArgs } from './args.js';
 import { accent, bold, dim, green, heading, red, table, yellow } from './ui.js';
 
@@ -45,6 +46,37 @@ async function main(): Promise<number> {
       return cmdExport(args);
     case 'html':
       return cmdHtml(args);
+    case 'draft':
+      return withModel(args, async () => {
+        const briefPath = args.positional[0];
+        const company = flagString(args, 'company', '');
+        if (!briefPath || !company) {
+          process.stderr.write('Usage: cubpitch draft <brief.md> --company "Name" [--methodology house]\n');
+          return 1;
+        }
+        return cmdDraft(aiContext(args), {
+          briefPath,
+          company,
+          methodologyId: flagString(args, 'methodology', 'house'),
+          themeId: flagString(args, 'theme', 'cubcloud'),
+          guidance: flagString(args, 'guidance', ''),
+        });
+      });
+    case 'critique':
+      return withModel(args, async () => {
+        const deck = await loadDeck(args);
+        if (!deck) return 1;
+        return cmdCritique(deck, aiContext(args), flagString(args, 'audience', '') || undefined);
+      });
+    case 'qa':
+      return withModel(args, async () => {
+        const deck = await loadDeck(args);
+        if (!deck) return 1;
+        return cmdQa(deck, aiContext(args), {
+          audience: flagString(args, 'audience', '') || undefined,
+          out: flagString(args, 'out', '') || undefined,
+        });
+      });
     case 'methodologies':
       return cmdMethodologies();
     case 'themes':
@@ -276,6 +308,27 @@ export function exportBasename(deck: Deck): string {
   return title.startsWith(company) ? title : `${company}-${title}`;
 }
 
+function aiContext(args: ParsedArgs): { storeRoot: string; model?: string } {
+  const model = flagString(args, 'model', '');
+  return { storeRoot: storeRoot(args), ...(model ? { model } : {}) };
+}
+
+/**
+ * Run a command that talks to a model.
+ *
+ * Model failures are ordinary here rather than exceptional: a rate limit, a
+ * missing key, an answer that would not parse. Each one gets a sentence saying
+ * whether retrying would help, instead of a stack trace.
+ */
+async function withModel(_args: ParsedArgs, run: () => Promise<number>): Promise<number> {
+  try {
+    return await run();
+  } catch (error) {
+    process.stderr.write(`${red('Failed')} ${explainModelError(error)}\n`);
+    return 1;
+  }
+}
+
 function storeRoot(args: ParsedArgs): string {
   return resolve(flagString(args, 'root', DEFAULT_ROOT));
 }
@@ -326,6 +379,11 @@ ${heading('Commands')}
   methodologies          Pitch frameworks available
   themes                 Themes available
 
+${dim('These call a model and need ANTHROPIC_API_KEY:')}
+  draft <brief>          Draft a deck from a brief
+  critique <deck>        Read the deck as a partner would
+  qa <deck>              The questions they will ask, and the answers you have
+
 ${heading('Options')}
   --root <dir>           Deck store (default ./decks, or CUBPITCH_HOME)
   --methodology <id>     house, sequoia, yc, kawasaki, a16z
@@ -335,11 +393,18 @@ ${heading('Options')}
   --offline              Render without fetching web fonts
   --layout               Also measure whether content fits (review)
   --strict               Exit non-zero when review finds errors
+  --company <name>       Company name (draft)
+  --audience <text>      Who is reading (critique, qa)
+  --guidance <text>      Extra direction for the drafter
+  --model <id>           Override the model
 
 ${heading('Examples')}
   cubpitch new "CubCloud" --methodology house --theme cubcloud
   cubpitch review dck_a1b2c3 --layout
   cubpitch export ./decks/dck_a1b2c3/deck.json --out ./out
+  cubpitch draft brief.md --company "CubCloud" --methodology house
+  cubpitch critique dck_a1b2c3 --audience "Healthcare seed fund"
+  cubpitch qa dck_a1b2c3 --out ./qa-prep.md
 `,
   );
 }

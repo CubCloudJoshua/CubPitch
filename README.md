@@ -59,8 +59,8 @@ extension.
 | Overflow measurement | Working |
 | Storage: file + Postgres | Working — file store tested, Postgres untested against a live server |
 | CLI | Working |
-| Web editor | **Not built yet** |
-| AI drafting, critique, Q&A prep | **Not built** — phase 2 |
+| Web editor | Working |
+| AI: draft, critique, Q&A prep | Working — tested against a fake provider; needs a key to run live |
 
 Numbers come from the test suite, not from projections.
 
@@ -100,6 +100,9 @@ node apps/cli/dist/index.js export examples/cubcloud-seed.json --out ./out
 | `html <deck>` | Write a standalone HTML deck |
 | `methodologies` | Frameworks available |
 | `themes` | Themes available |
+| `draft <brief>` | Draft a deck from a brief (needs `ANTHROPIC_API_KEY`) |
+| `critique <deck>` | Read the deck as a partner would |
+| `qa <deck>` | The questions they will ask, and the answers the deck supports |
 
 ---
 
@@ -112,6 +115,7 @@ packages/
   render/     React slide components, inline SVG charts, standalone HTML
   export/     PDF via Chromium, PPTX via native shapes, overflow measurement
   storage/    DeckStore interface, file store, Postgres store + migrations
+  ai/         Model provider abstraction, drafting, critique, objection prep
 apps/
   cli/        The cubpitch command
   web/        Editor (not built yet)
@@ -124,7 +128,11 @@ Dependencies point one way:
 ```
 core  ←  theme  ←  render  ←  export
       ←  storage
+      ←  ai
 ```
+
+Nothing below `apps/` depends on the AI layer, and the AI layer depends only on
+`core`. Every command that does not call a model works with no API key.
 
 ---
 

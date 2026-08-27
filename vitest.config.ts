@@ -12,6 +12,7 @@ export default defineConfig({
       '@cubpitch/render': new URL('./packages/render/src/index.ts', import.meta.url).pathname,
       '@cubpitch/export': new URL('./packages/export/src/index.ts', import.meta.url).pathname,
       '@cubpitch/storage': new URL('./packages/storage/src/index.ts', import.meta.url).pathname,
+      '@cubpitch/ai': new URL('./packages/ai/src/index.ts', import.meta.url).pathname,
     },
   },
 });
