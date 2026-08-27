@@ -4,7 +4,7 @@ import { extname, join, normalize, resolve } from 'node:path';
 import { parseDeck, reviewDeck, starterDeck } from '@cubpitch/core';
 import { deckToPdf, deckToPptx, findOverflow } from '@cubpitch/export';
 import { ConcurrentWriteError, DeckNotFoundError, FileDeckStore } from '@cubpitch/storage';
-import { AnthropicProvider, critiqueDeck, draftDeck, ModelError, prepareQa } from '@cubpitch/ai';
+import { AnthropicProvider, critiqueDeck, draftDeck, ModelError, prepareQa, rewriteSlide } from '@cubpitch/ai';
 /**
  * The editor's API.
  *
@@ -163,6 +163,22 @@ route('POST', '/api/decks/:id/qa', async (request, response, params) => {
         return send(response, 404, { error: 'No such deck' });
     const body = await readJson(request).catch(() => ({}));
     await withModel(response, () => prepareQa(modelProvider(), { deck, ...(body.audience ? { audience: body.audience } : {}) }));
+});
+route('POST', '/api/decks/:id/slides/:slideId/rewrite', async (request, response, params) => {
+    const deck = await store.get(params['id']);
+    if (!deck)
+        return send(response, 404, { error: 'No such deck' });
+    const body = await readJson(request).catch(() => ({}));
+    await withModel(response, async () => {
+        const result = await rewriteSlide(modelProvider(), {
+            deck,
+            slideId: params['slideId'],
+            ...(body.instruction ? { instruction: body.instruction } : {}),
+        });
+        // The rewrite is returned rather than saved. The author decides whether to
+        // keep it, and saving here would overwrite edits made while it ran.
+        return { slide: result.slide, rationale: result.rationale, needed: result.needed, ignored: result.ignored };
+    });
 });
 route('GET', '/api/decks/:id/export.pdf', async (_request, response, params) => {
     const deck = await store.get(params['id']);

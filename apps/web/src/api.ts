@@ -1,5 +1,5 @@
 import type { CritiqueResult, QaResult } from '@cubpitch/ai';
-import type { Deck, DeckReview } from '@cubpitch/core';
+import type { Deck, DeckReview, Slide } from '@cubpitch/core';
 
 /**
  * The editor's view of the server.
@@ -99,4 +99,11 @@ export const api = {
 
   qa: (id: string, audience?: string): Promise<QaResult> =>
     request(`/api/decks/${id}/qa`, { method: 'POST', body: JSON.stringify({ audience }) }),
+
+  rewrite: (
+    id: string,
+    slideId: string,
+    instruction?: string,
+  ): Promise<{ slide: Slide; rationale: string; needed: string[]; ignored: string[] }> =>
+    request(`/api/decks/${id}/slides/${slideId}/rewrite`, { method: 'POST', body: JSON.stringify({ instruction }) }),
 };

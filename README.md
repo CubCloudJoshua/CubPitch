@@ -43,6 +43,14 @@ same engine that prints it and names the ones being clipped.
 data attached. A deck exported as twelve screenshots is a PDF with the wrong
 extension.
 
+**Its AI refuses to make things up.** The drafter fills in the methodology's
+slides from your brief and reports what it had to assume and what it still
+needs, because a deck with a plausible invented revenue figure fails in the room
+instead of in review. Critique reads the deck back to you before it says
+anything, so an argument the reader could not reconstruct becomes the first
+finding. Question prep drafts an answer only where the deck supports one and
+names the gap where it does not.
+
 ---
 
 ## Status
@@ -60,7 +68,7 @@ extension.
 | Storage: file + Postgres | Working — file store tested, Postgres untested against a live server |
 | CLI | Working |
 | Web editor | Working |
-| AI: draft, critique, Q&A prep | Working — tested against a fake provider; needs a key to run live |
+| AI: draft, rewrite, critique, Q&A prep | Working — tested against a fake provider; needs a key to run live |
 
 Numbers come from the test suite, not from projections.
 
@@ -115,12 +123,12 @@ packages/
   render/     React slide components, inline SVG charts, standalone HTML
   export/     PDF via Chromium, PPTX via native shapes, overflow measurement
   storage/    DeckStore interface, file store, Postgres store + migrations
-  ai/         Model provider abstraction, drafting, critique, objection prep
+  ai/         Model provider abstraction, drafting, rewriting, critique, objection prep
 apps/
   cli/        The cubpitch command
   web/        Editor: rail, canvas, inspector, review, presenter
 examples/     A complete worked deck
-tests/        96 tests
+tests/        108 tests
 ```
 
 Dependencies point one way:

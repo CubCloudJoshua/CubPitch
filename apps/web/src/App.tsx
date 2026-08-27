@@ -16,7 +16,7 @@ import {
 } from '@cubpitch/core';
 import { THEMES } from '@cubpitch/theme';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api, type DeckSummary, type OverflowFinding } from './api.js';
+import { api, ModelCallError, type DeckSummary, type OverflowFinding } from './api.js';
 import { Coach } from './Coach.js';
 import { Inspector } from './Inspector.js';
 import { FittedSlide, Presenter, SlideCanvas } from './SlideCanvas.js';
@@ -113,6 +113,8 @@ function Picker({ onOpen }: { onOpen: (id: string) => void }): ReactNode {
 
       {error ? <p style={{ color: 'var(--ui-danger)' }}>{error}</p> : null}
 
+      <DraftFromBrief methodologyId={methodologyId} themeId={themeId} onOpen={onOpen} />
+
       <div style={{ marginTop: 36 }}>
         <p className="label" style={{ marginBottom: 8 }}>
           Decks
@@ -135,6 +137,137 @@ function Picker({ onOpen }: { onOpen: (id: string) => void }): ReactNode {
           ))
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Draft a deck from a brief.
+ *
+ * Collapsed by default. It costs a model call and takes a minute, so it should
+ * not be the first thing a returning author's eye lands on, and it should never
+ * be reachable by accident.
+ */
+function DraftFromBrief({
+  methodologyId,
+  themeId,
+  onOpen,
+}: {
+  methodologyId: string;
+  themeId: string;
+  onOpen: (id: string) => void;
+}): ReactNode {
+  const [open, setOpen] = useState(false);
+  const [company, setCompany] = useState('');
+  const [brief, setBrief] = useState('');
+  const [guidance, setGuidance] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<{ message: string; retryable: boolean } | null>(null);
+  const [result, setResult] = useState<{ deckId: string; assumptions: string[]; missing: string[] } | null>(null);
+
+  const run = async (): Promise<void> => {
+    setBusy(true);
+    setError(null);
+    try {
+      const drafted = await api.draft({ brief, company: company.trim(), methodologyId, themeId, guidance: guidance || undefined });
+      setResult({ deckId: drafted.deck.id, assumptions: drafted.assumptions, missing: drafted.missing });
+    } catch (cause) {
+      setError({ message: (cause as Error).message, retryable: cause instanceof ModelCallError ? cause.retryable : false });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <button className="btn" style={{ marginTop: 12 }} onClick={() => setOpen(true)}>
+        Or draft one from a brief
+      </button>
+    );
+  }
+
+  return (
+    <div className="card" style={{ padding: 18, marginTop: 12 }}>
+      <div className="card__head">
+        <span className="label">Draft from a brief</span>
+        <button className="btn btn--icon" onClick={() => setOpen(false)}>
+          ×
+        </button>
+      </div>
+
+      {result ? (
+        <div>
+          <p style={{ margin: '0 0 14px', fontSize: 13 }}>
+            Drafted into the {getMethodology(methodologyId).name}. Nothing was invented: here is what it had to assume and
+            what it still needs from you.
+          </p>
+
+          {result.assumptions.length > 0 ? (
+            <>
+              <p className="label" style={{ marginBottom: 6, color: 'var(--ui-caution)' }}>Assumed</p>
+              {result.assumptions.map((item) => (
+                <p key={item} className="field__hint" style={{ marginBottom: 4 }}>{item}</p>
+              ))}
+            </>
+          ) : null}
+
+          {result.missing.length > 0 ? (
+            <>
+              <p className="label" style={{ margin: '14px 0 6px', color: 'var(--ui-danger)' }}>You still have to supply</p>
+              {result.missing.map((item) => (
+                <p key={item} className="field__hint" style={{ marginBottom: 4 }}>{item}</p>
+              ))}
+            </>
+          ) : null}
+
+          <button className="btn btn--accent" style={{ marginTop: 16 }} onClick={() => onOpen(result.deckId)}>
+            Open the deck
+          </button>
+        </div>
+      ) : (
+        <>
+          <input
+            className="input"
+            style={{ marginBottom: 10 }}
+            placeholder="Company name"
+            value={company}
+            onChange={(event) => setCompany(event.target.value)}
+          />
+          <textarea
+            className="textarea"
+            rows={8}
+            placeholder="Everything you know: who the customer is, what it costs them today, what you have built, what you have sold, who you are, what you are raising. Paste an old deck if you have one."
+            value={brief}
+            onChange={(event) => setBrief(event.target.value)}
+          />
+          <input
+            className="input"
+            style={{ marginTop: 10 }}
+            placeholder="Anything else? e.g. we are pre-revenue, say so plainly"
+            value={guidance}
+            onChange={(event) => setGuidance(event.target.value)}
+          />
+          <p className="field__hint" style={{ marginTop: 8 }}>
+            It will not invent a number, a customer, or a date. Whatever the brief does not say, it will tell you it needs.
+          </p>
+
+          {error ? (
+            <p style={{ color: 'var(--ui-danger)', fontSize: 12.5, lineHeight: 1.5, marginTop: 10 }}>
+              {error.message}
+              {error.retryable ? ' Worth retrying.' : ''}
+            </p>
+          ) : null}
+
+          <button
+            className="btn btn--accent"
+            style={{ marginTop: 12 }}
+            disabled={busy || !company.trim() || brief.trim().length < 40}
+            onClick={() => void run()}
+          >
+            {busy ? 'Drafting, about a minute…' : 'Draft the deck'}
+          </button>
+        </>
+      )}
     </div>
   );
 }

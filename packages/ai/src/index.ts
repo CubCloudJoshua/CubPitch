@@ -4,3 +4,4 @@ export { UNTRUSTED_PREAMBLE, wrapUntrusted, looksLikeInjection } from './untrust
 export { draftDeck, type DraftInput, type DraftOutput, type DraftSlide } from './draft.js';
 export { critiqueDeck, deckToText, type CritiqueInput, type CritiqueResult, type Finding } from './critique.js';
 export { prepareQa, type QaInput, type QaResult, type Objection } from './qa.js';
+export { rewriteSlide, type RewriteInput, type RewriteOutput, type RewriteResult } from './rewrite.js';

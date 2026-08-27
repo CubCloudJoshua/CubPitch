@@ -12,6 +12,7 @@ import {
 } from '@cubpitch/core';
 import type { ReactNode } from 'react';
 import { Choice, ObjectList, Para, StringList, Text, Toggle } from './fields.js';
+import { Rewrite } from './Rewrite.js';
 
 /**
  * The inspector.
@@ -54,6 +55,10 @@ export function Inspector({ deck, slide, onChange }: { deck: Deck; slide: Slide;
       )}
 
       <SlideFields slide={slide} onChange={onChange} />
+
+      <div className="section">
+        <Rewrite deckId={deck.id} slide={slide} onAccept={onChange} />
+      </div>
 
       <div className="section">
         <Para

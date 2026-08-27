@@ -7,6 +7,7 @@ import {
   draftDeck,
   looksLikeInjection,
   prepareQa,
+  rewriteSlide,
   wrapUntrusted,
   type ModelProvider,
   type StructuredRequest,
@@ -235,6 +236,53 @@ describe('critique and Q&A', () => {
     expect(result.objections[0]!.answer).toBe('');
     expect(result.objections[0]!.needed).toContain('CAC');
     expect(provider.calls[0]!.system).toContain('Never invent a number');
+  });
+});
+
+describe('rewriting one slide', () => {
+  it('changes only the slide asked for', async () => {
+    // Regenerating a deck to fix one slide throws away every other edit.
+    const deck = sampleDeck();
+    const provider = new FakeProvider([
+      { fields: { title: 'Hospitals lose six weeks per AI project' }, rationale: 'Led with the cost.', needed: [] },
+    ]);
+
+    const result = await rewriteSlide(provider, { deck, slideId: 's2' });
+    const rewritten = result.deck.slides.find((slide) => slide.id === 's2')!;
+    expect('title' in rewritten && rewritten.title).toBe('Hospitals lose six weeks per AI project');
+    // Everything else is byte-identical.
+    expect(result.deck.slides.filter((slide) => slide.id !== 's2')).toEqual(deck.slides.filter((slide) => slide.id !== 's2'));
+  });
+
+  it('cannot change the slide type or invent a field', async () => {
+    // The model answers with field values, not a slide, and anything the slide
+    // does not already have is dropped rather than widening the document.
+    const deck = sampleDeck();
+    const provider = new FakeProvider([
+      { fields: { title: 'Kept', type: 'ask', madeUpField: 'x' }, rationale: '', needed: [] },
+    ]);
+
+    const result = await rewriteSlide(provider, { deck, slideId: 's2' });
+    expect(result.slide.type).toBe('problem');
+    expect(result.ignored).toContain('madeUpField');
+    expect(result.ignored).toContain('type');
+    expect(Object.keys(result.slide)).not.toContain('madeUpField');
+  });
+
+  it('gives the model the slide job and the rest of the deck as context', async () => {
+    const provider = new FakeProvider([{ fields: {}, rationale: '', needed: [] }]);
+    await rewriteSlide(provider, { deck: sampleDeck(), slideId: 's4', instruction: 'tighter' });
+
+    const call = provider.calls[0]!;
+    expect(call.user).toContain('Why now');
+    expect(call.user).toContain('<-- the one to rewrite');
+    expect(call.user).toContain('<UNTRUSTED_INPUT label="instruction">');
+    expect(call.system).toContain('do not change what kind of slide this is');
+  });
+
+  it('refuses a slide that is not in the deck', async () => {
+    const provider = new FakeProvider([{ fields: {}, rationale: '', needed: [] }]);
+    await expect(rewriteSlide(provider, { deck: sampleDeck(), slideId: 'nope' })).rejects.toThrow(/not in deck/);
   });
 });
 
