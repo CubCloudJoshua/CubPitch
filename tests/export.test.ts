@@ -19,6 +19,18 @@ function openPptx(buffer: Buffer): Record<string, string> {
   return out;
 }
 
+/**
+ * Every entry in the archive, not just the readable ones.
+ *
+ * `openPptx` decodes XML, which is what most assertions want. Package integrity
+ * needs the whole list: charts reference an embedded .xlsx workbook, and a
+ * relationship check run against the XML-only list reports it missing when it
+ * is right there.
+ */
+function pptxEntries(buffer: Buffer): string[] {
+  return Object.keys(unzipSync(new Uint8Array(buffer)));
+}
+
 function slideXml(files: Record<string, string>): string[] {
   return Object.entries(files)
     .filter(([name]) => /^ppt\/slides\/slide\d+\.xml$/.test(name))
@@ -146,5 +158,59 @@ describe('PowerPoint content loss', () => {
     expect(xml).toContain('CubCloud');
     expect(xml).toContain('Gov cloud');
     expect(xml).toContain('On-premise');
+  });
+});
+
+describe('PowerPoint package integrity', () => {
+  /**
+   * PowerPoint refuses a file whose parts and relationships disagree, and it
+   * refuses it with "needs repair" rather than anything diagnostic. Reading the
+   * package structure here is the closest thing to opening it that a test can
+   * do without PowerPoint.
+   */
+  it('declares every part it ships and ships every part it references', async () => {
+    const buffer = await deckToPptx(sampleDeck());
+    const files = openPptx(buffer);
+    const names = pptxEntries(buffer);
+
+    const contentTypes = files['[Content_Types].xml'];
+    expect(contentTypes, 'a package with no [Content_Types].xml will not open').toBeDefined();
+
+    const slides = names.filter((name) => /^ppt\/slides\/slide\d+\.xml$/.test(name));
+    expect(slides.length).toBeGreaterThan(0);
+
+    for (const slide of slides) {
+      // Every slide part must be declared, or PowerPoint reports the file as
+      // corrupt rather than skipping the slide.
+      expect(contentTypes, `${slide} is not declared in [Content_Types].xml`).toContain(`/${slide}`);
+
+      // Every slide needs its relationship part, which is what carries its
+      // layout, charts and notes.
+      const rels = slide.replace('ppt/slides/', 'ppt/slides/_rels/') + '.rels';
+      expect(names, `${slide} has no relationships part`).toContain(rels);
+    }
+
+    // Every relationship target must resolve to a part that is actually in the
+    // archive. A dangling target is the usual cause of "needs repair".
+    for (const [name, xml] of Object.entries(files)) {
+      if (!name.endsWith('.rels')) continue;
+      const dir = name.replace(/_rels\/[^/]+$/, '');
+      for (const match of xml.matchAll(/Target="([^"]+)"[^>]*?(TargetMode="External")?\s*\/>/g)) {
+        const target = match[1]!;
+        if (match[2] || target.startsWith('http') || target.startsWith('../slideMasters')) continue;
+        const resolved = new URL(target, `file:///${dir}`).pathname.replace(/^\//, '');
+        if (!resolved.includes('..')) {
+          expect(names, `${name} points at ${resolved}, which is not in the package`).toContain(resolved);
+        }
+      }
+    }
+  });
+
+  it('references every slide from the presentation', async () => {
+    const files = openPptx(await deckToPptx(sampleDeck()));
+    const presentationRels = files['ppt/_rels/presentation.xml.rels']!;
+    const slideCount = Object.keys(files).filter((name) => /^ppt\/slides\/slide\d+\.xml$/.test(name)).length;
+    const referenced = [...presentationRels.matchAll(/slides\/slide\d+\.xml/g)].length;
+    expect(referenced).toBe(slideCount);
   });
 });
