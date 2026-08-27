@@ -11,3 +11,5 @@ decks/
 *.pdf
 !examples/**/*.pdf
 .DS_Store
+.artifacts/
+.scratch/

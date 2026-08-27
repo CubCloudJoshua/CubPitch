@@ -144,8 +144,8 @@ export function slideCss(theme: Theme): string {
 .cp-row {
   position: relative;
   border-top: 1px solid var(--cp-border);
-  padding-top: calc(var(--cp-space) * 0.75);
-  padding-bottom: calc(var(--cp-space) * 0.75);
+  padding-top: calc(var(--cp-space) * 0.6);
+  padding-bottom: calc(var(--cp-space) * 0.6);
 }
 .cp-row::before {
   content: '';
@@ -157,8 +157,16 @@ export function slideCss(theme: Theme): string {
   background: var(--cp-accent);
 }
 
-.cp-header { margin-bottom: calc(var(--cp-space) * 1.5); }
-.cp-content { flex: 1; min-height: 0; }
+.cp-header { margin-bottom: calc(var(--cp-space) * 1.15); }
+
+/*
+ * Content is clipped rather than allowed to run under the footer. Overflowing
+ * text that overlaps the slide number looks like a broken tool; clipped text
+ * looks like a slide with too much on it, which is what it is. The exporter
+ * measures for overflow separately and names the slides, so this hides nothing.
+ */
+.cp-content { flex: 1; min-height: 0; overflow: hidden; }
+
 .cp-footer {
   display: flex;
   justify-content: space-between;
@@ -167,6 +175,8 @@ export function slideCss(theme: Theme): string {
   font-size: var(--cp-small);
   color: var(--cp-ink-muted);
   padding-top: var(--cp-space);
+  margin-top: calc(var(--cp-space) * 0.75);
+  flex-shrink: 0;
 }
 
 /* Print: one slide per page, at exactly slide size, no scaling. */

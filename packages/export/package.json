@@ -14,5 +14,14 @@
   "scripts": {
     "build": "tsc -b"
   },
-  "dependencies": { "@cubpitch/core": "workspace:*", "@cubpitch/theme": "workspace:*", "@cubpitch/render": "workspace:*", "pptxgenjs": "^4.0.1", "playwright": "^1.57.0" }
+  "dependencies": {
+    "@cubpitch/core": "workspace:*",
+    "@cubpitch/theme": "workspace:*",
+    "@cubpitch/render": "workspace:*",
+    "pptxgenjs": "^4.0.1",
+    "playwright": "^1.57.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.0"
+  }
 }

@@ -155,25 +155,25 @@ export const WhyNowSlideView: SlideView<'whyNow'> = ({ slide }) => (
 export const MarketSlideView: SlideView<'market'> = ({ slide }) => (
   <>
     <Header eyebrow="Market" title={slide.title} lead={slide.lead} />
-    <div className="cp-content" style={{ display: 'flex', flexDirection: 'column', gap: 36 }}>
+    <div className="cp-content" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {slide.beachhead ? (
-        <Panel style={{ borderColor: 'var(--cp-accent)', padding: 40 }}>
-          <Label style={{ marginBottom: 18, color: 'var(--cp-accent-bright)' }}>Beachhead: who buys in the next 12 months</Label>
+        <Panel style={{ borderColor: 'var(--cp-accent)', padding: 32 }}>
+          <Label style={{ marginBottom: 14, color: 'var(--cp-accent-bright)' }}>Beachhead: who buys in the next 12 months</Label>
           <p style={{ fontSize: 'var(--cp-lead)', margin: 0 }}>
             <Inline text={slide.beachhead.segment} />
           </p>
-          <div style={{ display: 'flex', gap: 80, marginTop: 28 }}>
-            {slide.beachhead.buyerCount ? <Stat value={slide.beachhead.buyerCount} label="Buyers" /> : null}
-            {slide.beachhead.price ? <Stat value={slide.beachhead.price} label="Each pays" /> : null}
+          <div style={{ display: 'flex', gap: 72, marginTop: 20 }}>
+            {slide.beachhead.buyerCount ? <Stat value={slide.beachhead.buyerCount} label="Buyers" scale={0.6} /> : null}
+            {slide.beachhead.price ? <Stat value={slide.beachhead.price} label="Each pays" scale={0.6} /> : null}
           </div>
         </Panel>
       ) : null}
       <div style={{ display: 'grid', gridTemplateColumns: slide.broader ? '1.5fr 1fr' : '1fr', gap: 48 }}>
         {slide.expansion.length > 0 ? (
           <div>
-            <Label style={{ marginBottom: 16 }}>Then</Label>
+            <Label style={{ marginBottom: 12 }}>Then</Label>
             {slide.expansion.map((item) => (
-              <Row key={item.segment} style={{ paddingTop: 16, paddingBottom: 16 }}>
+              <Row key={item.segment} style={{ paddingTop: 12, paddingBottom: 12 }}>
                 <p className="cp-body">{item.segment}</p>
                 {item.note ? (
                   <p className="cp-small" style={{ marginTop: 6 }}>
@@ -185,8 +185,8 @@ export const MarketSlideView: SlideView<'market'> = ({ slide }) => (
           </div>
         ) : null}
         {slide.broader ? (
-          <div style={{ textAlign: 'right' }}>
-            <Stat value={slide.broader.value} label={slide.broader.label} align="left" />
+          <div>
+            <Stat value={slide.broader.value} label={slide.broader.label} scale={0.75} />
           </div>
         ) : null}
       </div>

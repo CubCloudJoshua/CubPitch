@@ -73,15 +73,21 @@ export function Stat({
   label,
   note,
   align = 'left',
+  scale = 1,
 }: {
   value: string;
   label: string;
   note?: string;
   align?: 'left' | 'center';
+  /** A stat nested inside a panel should not carry the weight of one that
+   *  owns the slide. */
+  scale?: number;
 }): ReactNode {
   return (
     <div style={{ textAlign: align }}>
-      <div className="cp-stat-value">{value}</div>
+      <div className="cp-stat-value" style={scale === 1 ? undefined : { fontSize: `calc(var(--cp-stat) * ${scale})` }}>
+        {value}
+      </div>
       <p className="cp-label" style={{ marginTop: 8 }}>
         {label}
       </p>
@@ -132,7 +138,7 @@ export function Panel({ children, style }: { children: ReactNode; style?: CSSPro
 export function Source({ text }: { text?: string }): ReactNode {
   if (!text) return null;
   return (
-    <p className="cp-small" style={{ marginTop: 20, opacity: 0.85 }}>
+    <p className="cp-small" style={{ marginTop: 12, opacity: 0.85 }}>
       Source: <Inline text={text} />
     </p>
   );
