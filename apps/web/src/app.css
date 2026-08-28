@@ -706,3 +706,37 @@ select {
   letter-spacing: 0.06em;
   color: var(--ui-ink-muted);
 }
+
+/* --- Rail drag-to-reorder ------------------------------------------------- */
+
+.rail__slide {
+  transition: border-color 0.12s ease, opacity 0.12s ease;
+}
+.rail__slide--dragging {
+  opacity: 0.4;
+}
+.rail__slide--drop-before {
+  box-shadow: 0 -2px 0 0 var(--ui-accent);
+}
+.rail__slide--drop-after {
+  box-shadow: 0 2px 0 0 var(--ui-accent);
+}
+.rail__slide[draggable='true'] {
+  cursor: grab;
+}
+.rail__slide[draggable='true']:active {
+  cursor: grabbing;
+}
+
+/* --- Deck picker row actions ---------------------------------------------- */
+
+.picker__row-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: 10px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.picker__row:hover .picker__row-actions {
+  opacity: 1;
+}

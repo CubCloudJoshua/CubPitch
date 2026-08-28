@@ -5,6 +5,7 @@ import {
   METHODOLOGIES,
   moveSlide,
   removeSlide,
+  reorderSlides,
   SLIDE_LABELS,
   SLIDE_TYPES,
   slideTitle,
@@ -36,6 +37,20 @@ export function App(): ReactNode {
   }, [deckId]);
 
   return deckId ? <Editor deckId={deckId} onClose={() => setDeckId(null)} /> : <Picker onOpen={setDeckId} />;
+}
+
+/**
+ * Move one id to land before or after another, preserving everything else.
+ *
+ * The rail renders every slide including hidden ones, so this operates on the
+ * full id list and `reorderSlides` in core keeps any id it was not told about.
+ */
+function reorderIds(ids: string[], dragId: string, targetId: string, after: boolean): string[] {
+  const without = ids.filter((id) => id !== dragId);
+  const at = without.indexOf(targetId);
+  if (at === -1) return ids;
+  without.splice(after ? at + 1 : at, 0, dragId);
+  return without;
 }
 
 // --- Deck picker ------------------------------------------------------------
@@ -134,7 +149,38 @@ function Picker({ onOpen }: { onOpen: (id: string) => void }): ReactNode {
                   {deck.company} · {getMethodology(deck.methodologyId).name} · {deck.slideCount} slides
                 </p>
               </div>
-              <span className="label">{deck.updatedAt.slice(0, 10)}</span>
+              <span className="label" style={{ marginRight: 4 }}>{deck.updatedAt.slice(0, 10)}</span>
+              <span className="picker__row-actions" onClick={(event) => event.stopPropagation()}>
+                <button
+                  className="btn btn--icon"
+                  title="Duplicate"
+                  onClick={async () => {
+                    try {
+                      const copy = await api.duplicateDeck(deck.id);
+                      onOpen(copy.id);
+                    } catch (cause) {
+                      setError((cause as Error).message);
+                    }
+                  }}
+                >
+                  ⧉
+                </button>
+                <button
+                  className="btn btn--icon btn--danger"
+                  title="Delete"
+                  onClick={async () => {
+                    if (!window.confirm(`Delete "${deck.title}"? This cannot be undone.`)) return;
+                    try {
+                      await api.deleteDeck(deck.id);
+                      refresh();
+                    } catch (cause) {
+                      setError((cause as Error).message);
+                    }
+                  }}
+                >
+                  ×
+                </button>
+              </span>
             </div>
           ))
         )}
@@ -285,6 +331,9 @@ function Editor({ deckId, onClose }: { deckId: string; onClose: () => void }): R
   const [showCoach, setShowCoach] = useState(false);
   const [presenting, setPresenting] = useState(false);
   const [rehearsing, setRehearsing] = useState(false);
+  // Drag-to-reorder state: the slide being dragged, and where it would land.
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ id: string; after: boolean } | null>(null);
   const [overflow, setOverflow] = useState<OverflowFinding[] | null>(null);
 
   // Select the first slide once the deck arrives, and never hold a selection
@@ -469,6 +518,8 @@ function Editor({ deckId, onClose }: { deckId: string; onClose: () => void }): R
               : findings.some((finding) => finding.severity === 'warning')
                 ? 'warning'
                 : null;
+            const isDropBefore = dropTarget?.id === slide.id && !dropTarget.after;
+            const isDropAfter = dropTarget?.id === slide.id && dropTarget.after;
             return (
               <div
                 key={slide.id}
@@ -476,10 +527,38 @@ function Editor({ deckId, onClose }: { deckId: string; onClose: () => void }): R
                   'rail__slide',
                   slide.id === selectedId ? 'rail__slide--active' : '',
                   slide.hidden ? 'rail__slide--hidden' : '',
+                  dragId === slide.id ? 'rail__slide--dragging' : '',
+                  isDropBefore ? 'rail__slide--drop-before' : '',
+                  isDropAfter ? 'rail__slide--drop-after' : '',
                 ]
                   .filter(Boolean)
                   .join(' ')}
                 onClick={() => setSelectedId(slide.id)}
+                draggable
+                onDragStart={(event) => {
+                  setDragId(slide.id);
+                  event.dataTransfer.effectAllowed = 'move';
+                }}
+                onDragOver={(event) => {
+                  if (!dragId || dragId === slide.id) return;
+                  event.preventDefault();
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  const after = event.clientY > rect.top + rect.height / 2;
+                  if (dropTarget?.id !== slide.id || dropTarget.after !== after) setDropTarget({ id: slide.id, after });
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  if (dragId && dropTarget) {
+                    const order = reorderIds(deck.slides.map((entry) => entry.id), dragId, dropTarget.id, dropTarget.after);
+                    apply((current) => reorderSlides(current, order));
+                  }
+                  setDragId(null);
+                  setDropTarget(null);
+                }}
+                onDragEnd={() => {
+                  setDragId(null);
+                  setDropTarget(null);
+                }}
               >
                 <span className="rail__number">{index + 1}</span>
                 {worst ? <span className={`rail__flag rail__flag--${worst}`} /> : null}

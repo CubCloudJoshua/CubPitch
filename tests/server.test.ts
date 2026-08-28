@@ -145,6 +145,25 @@ describe('editor API', () => {
     });
     expect(response.status).toBe(400);
   });
+
+  it('duplicates a deck into a fresh document', async () => {
+    const before = ((await (await fetch(`${base}/api/decks`)).json()) as unknown[]).length;
+    const response = await fetch(`${base}/api/decks/dck_test/duplicate`, { method: 'POST' });
+    expect(response.status).toBe(201);
+
+    const copy = (await response.json()) as { id: string; title: string; slides: unknown[] };
+    expect(copy.id).not.toBe('dck_test');
+    expect(copy.title).toContain('copy');
+    // A copy is a new document, so the store now holds one more.
+    expect(((await (await fetch(`${base}/api/decks`)).json()) as unknown[]).length).toBe(before + 1);
+
+    // Clean up so the count assertions in other tests stay stable.
+    await fetch(`${base}/api/decks/${copy.id}`, { method: 'DELETE' });
+  });
+
+  it('404s a duplicate of a deck that does not exist', async () => {
+    expect((await fetch(`${base}/api/decks/dck_missing/duplicate`, { method: 'POST' })).status).toBe(404);
+  });
 });
 
 describe('the API rejects ids that are paths', () => {

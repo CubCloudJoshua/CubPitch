@@ -1,7 +1,7 @@
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
-import { isSafeId, parseDeck, reviewDeck, starterDeck, type Deck } from '@cubpitch/core';
+import { deckId, isSafeId, parseDeck, reviewDeck, starterDeck, type Deck } from '@cubpitch/core';
 import { deckToPdf, deckToPptx, findOverflow } from '@cubpitch/export';
 import { ConcurrentWriteError, DeckNotFoundError, FileDeckStore } from '@cubpitch/storage';
 import { AnthropicProvider, critiqueDeck, draftDeck, ModelError, prepareQa, rewriteSlide } from '@cubpitch/ai';
@@ -128,6 +128,22 @@ route('PUT', '/api/decks/:id', async (request, response, params) => {
     if (error instanceof ConcurrentWriteError) return send(response, 409, { error: error.message });
     throw error;
   }
+});
+
+route('POST', '/api/decks/:id/duplicate', async (_request, response, params) => {
+  const source = await store.get(params['id']!);
+  if (!source) return send(response, 404, { error: 'No such deck' });
+
+  // A copy is a new document: fresh id, its own history, a title that says so.
+  const now = new Date().toISOString();
+  const copy: Deck = {
+    ...source,
+    id: deckId(),
+    title: `${source.title} copy`,
+    createdAt: now,
+    updatedAt: now,
+  };
+  send(response, 201, await store.put(copy, { note: `copied from ${source.id}` }));
 });
 
 route('DELETE', '/api/decks/:id', async (_request, response, params) => {

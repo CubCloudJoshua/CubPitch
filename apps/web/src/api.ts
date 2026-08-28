@@ -82,6 +82,8 @@ export const api = {
 
   deleteDeck: (id: string): Promise<void> => request(`/api/decks/${id}`, { method: 'DELETE' }),
 
+  duplicateDeck: (id: string): Promise<Deck> => request(`/api/decks/${id}/duplicate`, { method: 'POST' }),
+
   review: (id: string): Promise<DeckReview> => request(`/api/decks/${id}/review`),
 
   layout: (id: string): Promise<OverflowFinding[]> => request(`/api/decks/${id}/layout`),
