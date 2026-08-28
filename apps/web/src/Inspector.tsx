@@ -13,6 +13,7 @@ import {
 } from '@cubpitch/core';
 import type { ReactNode } from 'react';
 import { Choice, ObjectList, Para, StringList, Text, Toggle } from './fields.js';
+import { ChartField } from './ChartField.js';
 import { MediaField } from './MediaField.js';
 import { Rewrite } from './Rewrite.js';
 
@@ -110,6 +111,8 @@ function SlideFields({ slide, onChange }: { slide: Slide; onChange: Patch }): Re
       return <QuoteFields slide={slide} onChange={onChange} />;
     case 'logos':
       return <LogosFields slide={slide} onChange={onChange} />;
+    case 'financials':
+      return <FinancialsFields slide={slide} onChange={onChange} />;
     default:
       return <GenericFields slide={slide} onChange={onChange} />;
   }
@@ -160,6 +163,26 @@ function LogosFields({ slide, onChange }: { slide: SlideOf<'logos'>; onChange: P
           </>
         )}
       </ObjectList>
+    </>
+  );
+}
+
+function FinancialsFields({ slide, onChange }: { slide: SlideOf<'financials'>; onChange: Patch }): ReactNode {
+  return (
+    <>
+      <Para label="Title" value={slide.title} rows={2} onChange={(title) => onChange({ title })} />
+      <Para label="Lead" value={slide.lead} onChange={(lead) => onChange({ lead })} />
+      <ChartField label="Chart" value={slide.chart} onChange={(chart) => onChange({ chart })} />
+      <StringList
+        label="Assumptions"
+        values={slide.assumptions}
+        onChange={(assumptions) => onChange({ assumptions })}
+        addLabel="assumption"
+      />
+      <p className="field__hint">
+        The projection table is edited in the deck JSON for now. A projection with no stated assumptions invites the room
+        to invent its own.
+      </p>
     </>
   );
 }
@@ -395,6 +418,7 @@ function TractionFields({ slide, onChange }: { slide: SlideOf<'traction'>; onCha
         The slide renders strongest first regardless of the order here: revenue, then retention, then paid pilots, then
         deposits, then letters of intent.
       </p>
+      <ChartField label="Chart (optional)" value={slide.chart} onChange={(chart) => onChange({ chart })} />
     </>
   );
 }
