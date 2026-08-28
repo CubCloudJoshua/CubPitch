@@ -14,6 +14,7 @@ import {
 import type { ReactNode } from 'react';
 import { Choice, ObjectList, Para, StringList, Text, Toggle } from './fields.js';
 import { ChartField } from './ChartField.js';
+import { TableField } from './TableField.js';
 import { MediaField } from './MediaField.js';
 import { Rewrite } from './Rewrite.js';
 
@@ -172,6 +173,7 @@ function FinancialsFields({ slide, onChange }: { slide: SlideOf<'financials'>; o
     <>
       <Para label="Title" value={slide.title} rows={2} onChange={(title) => onChange({ title })} />
       <Para label="Lead" value={slide.lead} onChange={(lead) => onChange({ lead })} />
+      <TableField label="Projection table" value={slide.table} onChange={(table) => onChange({ table })} />
       <ChartField label="Chart" value={slide.chart} onChange={(chart) => onChange({ chart })} />
       <StringList
         label="Assumptions"
@@ -180,8 +182,7 @@ function FinancialsFields({ slide, onChange }: { slide: SlideOf<'financials'>; o
         addLabel="assumption"
       />
       <p className="field__hint">
-        The projection table is edited in the deck JSON for now. A projection with no stated assumptions invites the room
-        to invent its own.
+        A projection with no stated assumptions invites the room to invent its own.
       </p>
     </>
   );

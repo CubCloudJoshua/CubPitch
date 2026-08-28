@@ -740,3 +740,59 @@ select {
 .picker__row:hover .picker__row-actions {
   opacity: 1;
 }
+
+/* --- Table editor --------------------------------------------------------- */
+
+.tbl-edit {
+  overflow-x: auto;
+  border: 1px solid var(--ui-border);
+  border-radius: 6px;
+}
+.tbl-edit table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.tbl-edit th,
+.tbl-edit td {
+  border: 1px solid var(--ui-border);
+  padding: 0;
+}
+.tbl-edit__cell {
+  width: 100%;
+  min-width: 62px;
+  background: transparent;
+  border: none;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+.tbl-edit__cell:focus {
+  outline: 1px solid var(--ui-accent-border);
+  background: var(--ui-surface);
+}
+.tbl-edit__head {
+  font-weight: 600;
+  color: var(--ui-ink-muted);
+}
+.tbl-edit__row--emph .tbl-edit__cell {
+  color: var(--ui-ink);
+  font-weight: 600;
+  background: var(--ui-surface);
+}
+.tbl-edit th {
+  position: relative;
+}
+.tbl-edit__actions {
+  white-space: nowrap;
+  padding: 0 4px;
+}
+.tbl-edit__x {
+  background: transparent;
+  border: none;
+  color: var(--ui-ink-muted);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+}
+.tbl-edit__x:hover {
+  color: var(--ui-accent-bright);
+}

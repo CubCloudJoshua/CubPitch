@@ -45,6 +45,16 @@ export function App(): ReactNode {
  * The rail renders every slide including hidden ones, so this operates on the
  * full id list and `reorderSlides` in core keeps any id it was not told about.
  */
+/** A filesystem-friendly filename from a deck title. */
+function deckSlug(title: string): string {
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+  return slug || 'deck';
+}
+
 function reorderIds(ids: string[], dragId: string, targetId: string, after: boolean): string[] {
   const without = ids.filter((id) => id !== dragId);
   const at = without.indexOf(targetId);
@@ -334,6 +344,7 @@ function Editor({ deckId, onClose }: { deckId: string; onClose: () => void }): R
   // Drag-to-reorder state: the slide being dragged, and where it would land.
   const [dragId, setDragId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ id: string; after: boolean } | null>(null);
+  const [exporting, setExporting] = useState<'pdf' | 'pptx' | null>(null);
   const [overflow, setOverflow] = useState<OverflowFinding[] | null>(null);
 
   // Select the first slide once the deck arrives, and never hold a selection
@@ -419,7 +430,31 @@ function Editor({ deckId, onClose }: { deckId: string; onClose: () => void }): R
       window.alert(`Not exporting: your last change did not save.\n\n${editor.saveError ?? ''}`);
       return;
     }
-    window.location.href = api.exportUrl(deck.id, format);
+
+    // Fetch the file rather than navigating to it. A PDF takes a few seconds to
+    // render, and a plain link gives no sign anything is happening; this shows a
+    // busy button and surfaces a failure as a message instead of a blank tab.
+    setExporting(format);
+    try {
+      const response = await fetch(api.exportUrl(deck.id, format));
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? `Export failed (${response.status})`);
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${deckSlug(deck.title)}.${format}`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      window.alert(`Could not export: ${(error as Error).message}`);
+    } finally {
+      setExporting(null);
+    }
   };
 
   return (
@@ -501,11 +536,11 @@ function Editor({ deckId, onClose }: { deckId: string; onClose: () => void }): R
         <button className="btn" onClick={() => setRehearsing(true)} title="Notes, next slide, and a clock against the budget">
           Rehearse
         </button>
-        <button className="btn" onClick={() => void download('pdf')}>
-          PDF
+        <button className="btn" onClick={() => void download('pdf')} disabled={exporting !== null}>
+          {exporting === 'pdf' ? 'PDF…' : 'PDF'}
         </button>
-        <button className="btn" onClick={() => void download('pptx')}>
-          PPTX
+        <button className="btn" onClick={() => void download('pptx')} disabled={exporting !== null}>
+          {exporting === 'pptx' ? 'PPTX…' : 'PPTX'}
         </button>
       </header>
 
