@@ -7,11 +7,13 @@ import {
   type Deck,
   type EvidenceKind,
   type GoToMarketMotion,
+  type LogoItem,
   type Slide,
   type SlideOf,
 } from '@cubpitch/core';
 import type { ReactNode } from 'react';
 import { Choice, ObjectList, Para, StringList, Text, Toggle } from './fields.js';
+import { MediaField } from './MediaField.js';
 import { Rewrite } from './Rewrite.js';
 
 /**
@@ -102,9 +104,64 @@ function SlideFields({ slide, onChange }: { slide: Slide; onChange: Patch }): Re
       return <TeamFields slide={slide} onChange={onChange} />;
     case 'ask':
       return <AskFields slide={slide} onChange={onChange} />;
+    case 'image':
+      return <ImageFields slide={slide} onChange={onChange} />;
+    case 'quote':
+      return <QuoteFields slide={slide} onChange={onChange} />;
+    case 'logos':
+      return <LogosFields slide={slide} onChange={onChange} />;
     default:
       return <GenericFields slide={slide} onChange={onChange} />;
   }
+}
+
+// --- Media-bearing supporting slides ----------------------------------------
+
+function ImageFields({ slide, onChange }: { slide: SlideOf<'image'>; onChange: Patch }): ReactNode {
+  return (
+    <>
+      <MediaField label="Image" value={slide.media} kind="full" onChange={(media) => onChange({ media: media ?? { src: '', alt: '', fit: 'cover' } })} />
+      <Text label="Title" value={slide.title ?? ''} onChange={(title) => onChange({ title })} />
+      <Text label="Caption" value={slide.caption ?? ''} onChange={(caption) => onChange({ caption })} />
+    </>
+  );
+}
+
+function QuoteFields({ slide, onChange }: { slide: SlideOf<'quote'>; onChange: Patch }): ReactNode {
+  return (
+    <>
+      <Para label="Quote" value={slide.text} rows={3} onChange={(text) => onChange({ text })} hint={MARKUP_HINT} />
+      <Text label="Author" value={slide.author} onChange={(author) => onChange({ author })} />
+      <Text label="Role" value={slide.role ?? ''} onChange={(role) => onChange({ role })} />
+      <Text label="Company" value={slide.org ?? ''} onChange={(org) => onChange({ org })} />
+      <MediaField label="Photo" value={slide.photo} kind="photo" onChange={(photo) => onChange({ photo })} />
+    </>
+  );
+}
+
+function LogosFields({ slide, onChange }: { slide: SlideOf<'logos'>; onChange: Patch }): ReactNode {
+  return (
+    <>
+      <Para label="Title" value={slide.title} rows={2} onChange={(title) => onChange({ title })} />
+      <Para label="Lead" value={slide.lead} onChange={(lead) => onChange({ lead })} />
+      <ObjectList
+        label="Logos"
+        items={slide.logos}
+        onChange={(logos) => onChange({ logos })}
+        create={(): LogoItem => ({ name: '' })}
+        title={(logo, index) => logo.name || `Logo ${index + 1}`}
+        addLabel="logo"
+      >
+        {(logo, update) => (
+          <>
+            <Text label="Name" value={logo.name} onChange={(name) => update({ name })} />
+            <MediaField label="Logo image" value={logo.image} kind="logo" onChange={(image) => update({ image })} />
+            <Text label="Note" value={logo.note ?? ''} onChange={(note) => update({ note })} />
+          </>
+        )}
+      </ObjectList>
+    </>
+  );
 }
 
 // --- The twelve -------------------------------------------------------------
@@ -124,6 +181,14 @@ function CoverFields({ slide, onChange }: { slide: SlideOf<'cover'>; onChange: P
       <Text label="Presenter" value={slide.presenter ?? ''} onChange={(presenter) => onChange({ presenter })} />
       <Text label="Date" value={slide.date ?? ''} onChange={(date) => onChange({ date })} />
       <Toggle label="Confidentiality notice" value={slide.confidential} onChange={(confidential) => onChange({ confidential })} />
+      <MediaField label="Logo" value={slide.logo} kind="logo" onChange={(logo) => onChange({ logo })} />
+      <MediaField
+        label="Background"
+        value={slide.background}
+        kind="full"
+        onChange={(background) => onChange({ background })}
+        hint="Dimmed behind the title. Optional."
+      />
     </>
   );
 }
@@ -156,6 +221,7 @@ function ProblemFields({ slide, onChange }: { slide: SlideOf<'problem'>; onChang
           onChange={(label) => onChange({ stat: { ...(slide.stat ?? { value: '' }), label } })}
         />
       </div>
+      <MediaField label="Image (instead of the stat)" value={slide.media} onChange={(media) => onChange({ media })} />
     </>
   );
 }
@@ -174,6 +240,7 @@ function SolutionFields({ slide, onChange }: { slide: SlideOf<'solution'>; onCha
         onChange={(outOfScope) => onChange({ outOfScope })}
         addLabel="out-of-scope item"
       />
+      <MediaField label="Product image" value={slide.media} onChange={(media) => onChange({ media })} />
     </>
   );
 }
@@ -288,6 +355,7 @@ function ProductFields({ slide, onChange }: { slide: SlideOf<'product'>; onChang
         onChange={(moat) => onChange({ moat })}
         hint="Data, workflow, distribution, switching cost. If you do not have one, leave it empty."
       />
+      <MediaField label="Product screenshot" value={slide.media} onChange={(media) => onChange({ media })} />
     </>
   );
 }
@@ -469,6 +537,7 @@ function TeamFields({ slide, onChange }: { slide: SlideOf<'team'>; onChange: Pat
               onChange={(credentials) => update({ credentials })}
               addLabel="credential"
             />
+            <MediaField label="Photo" value={person.photo} kind="photo" onChange={(photo) => update({ photo })} />
           </>
         )}
       </ObjectList>

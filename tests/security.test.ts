@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync, existsSync } from 'node:
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { isSafeId, parseDeck } from '@cubpitch/core';
+import { isSafeId, isSafeMediaSrc, parseDeck } from '@cubpitch/core';
 import { isAllowedUrl } from '@cubpitch/export';
 import { FileDeckStore } from '@cubpitch/storage';
 import { sampleDeck } from './fixtures/deck.js';
@@ -169,5 +169,20 @@ describe('deck media cannot carry an executable scheme', () => {
       };
       expect(() => parseDeck(withMedia), `${src} should be accepted`).not.toThrow();
     }
+  });
+
+  it('refuses a data: URI that is not an image', () => {
+    // A data:text/html blob riding in as an "image" was a plausible way to
+    // smuggle markup into the deck. An image source must be an image.
+    expect(isSafeMediaSrc('data:text/html,<script>alert(1)</script>')).toBe(false);
+    expect(isSafeMediaSrc('data:application/json,{}')).toBe(false);
+    expect(isSafeMediaSrc('data:image/png;base64,iVBORw0KGgo=')).toBe(true);
+    expect(isSafeMediaSrc('data:image/svg+xml;utf8,<svg/>')).toBe(true);
+  });
+
+  it('refuses an oversized embedded image', () => {
+    // A hostile or hand-edited deck must not carry a blob that breaks the save.
+    const huge = 'data:image/png;base64,' + 'A'.repeat(20 * 1024 * 1024);
+    expect(isSafeMediaSrc(huge)).toBe(false);
   });
 });

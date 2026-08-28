@@ -543,3 +543,45 @@ select {
   font-size: 13px;
   line-height: 1.6;
 }
+
+/* --- Media field ---------------------------------------------------------- */
+
+.media {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+.media__preview {
+  width: 120px;
+  height: 74px;
+  flex-shrink: 0;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius, 6px);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: var(--ui-surface);
+}
+.media__meta {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.media__drop {
+  border: 1px dashed var(--ui-border-strong);
+  border-radius: 6px;
+  padding: 18px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ui-ink-muted);
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+.media__drop:hover {
+  border-color: var(--ui-accent-border);
+  color: var(--ui-accent-bright);
+}
+.media__drop--over {
+  border-color: var(--ui-accent);
+  color: var(--ui-accent-bright);
+  background: var(--ui-accent-fill);
+}

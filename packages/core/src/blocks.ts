@@ -28,21 +28,43 @@ import { z } from 'zod';
 export const InlineText = z.string();
 export type InlineText = z.infer<typeof InlineText>;
 
+/**
+ * The most an embedded image may weigh, as a string length.
+ *
+ * A base64 data URI is about a third larger than the bytes it carries, so this
+ * is roughly a 12 MB image. The editor downscales far below this before
+ * embedding; the cap exists so a hand-edited or hostile deck cannot carry a
+ * 100 MB blob that breaks the save (the server body limit is 32 MB) or the
+ * renderer.
+ */
+export const MAX_EMBEDDED_SRC_LENGTH = 16 * 1024 * 1024;
+
+/**
+ * Whether a string is a legal image source.
+ *
+ * Empty is legal: adding an image slide and choosing the image are two separate
+ * acts. Otherwise a source is either a `data:image/...` URI embedded in the
+ * deck, or an `http(s)` URL. Everything else is refused, which closes three
+ * things at once: `javascript:`/`vbscript:` never reach an `img`, `file:`
+ * cannot read the host disk on export, and a `data:text/html` blob cannot ride
+ * in disguised as an image.
+ */
+export function isSafeMediaSrc(value: string): boolean {
+  if (value === '') return true;
+  if (value.length > MAX_EMBEDDED_SRC_LENGTH) return false;
+  const trimmed = value.trimStart();
+  if (/^data:image\/(png|jpeg|jpg|gif|webp|svg\+xml|avif);/i.test(trimmed)) return true;
+  return /^https?:\/\//i.test(trimmed);
+}
+
 export const MediaRef = z.object({
   /**
-   * Absolute URL, or a `data:` URI for assets embedded in the deck itself.
-   *
-   * Empty is legal. Adding an image slide and choosing the image are two
-   * separate acts, and a schema that rejects the gap between them is a schema
-   * that loses the author's work when they add the slide first.
+   * A `data:image/...` URI embedded in the deck, or an `http(s)` URL. Empty
+   * until an image is chosen.
    */
-  src: z
-    .string()
-    .default('')
-    .refine(
-      (value) => !/^\s*(javascript|file|vbscript):/i.test(value),
-      'Image source must not use a javascript:, file: or vbscript: scheme',
-    ),
+  src: z.string().default('').refine(isSafeMediaSrc, {
+    message: 'Image source must be an embedded image or an http(s) URL',
+  }),
   alt: z.string().default(''),
   fit: z.enum(['cover', 'contain']).default('cover'),
   /** Focal point as fractions of width/height, used when cropping to `cover`. */
