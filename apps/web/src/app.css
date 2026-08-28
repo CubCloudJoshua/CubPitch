@@ -796,3 +796,26 @@ select {
 .tbl-edit__x:hover {
   color: var(--ui-accent-bright);
 }
+
+/* --- Modal ---------------------------------------------------------------- */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(4, 4, 4, 0.6);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.modal__panel {
+  width: 100%;
+  max-width: 440px;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+}

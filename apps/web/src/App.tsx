@@ -13,6 +13,7 @@ import {
   visibleSlides,
   type Brand,
   type Deck,
+  type DeckMeta,
   type ReviewFinding,
   type SlideType,
 } from '@cubpitch/core';
@@ -20,6 +21,7 @@ import { getTheme, THEMES, themeForDeck } from '@cubpitch/theme';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, ModelCallError, type DeckSummary, type OverflowFinding } from './api.js';
 import { Coach } from './Coach.js';
+import { DeckSettings } from './DeckSettings.js';
 import { Inspector } from './Inspector.js';
 import { Rehearse } from './Rehearse.js';
 import { FittedSlide, Presenter, SlideCanvas } from './SlideCanvas.js';
@@ -345,6 +347,7 @@ function Editor({ deckId, onClose }: { deckId: string; onClose: () => void }): R
   const [dragId, setDragId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ id: string; after: boolean } | null>(null);
   const [exporting, setExporting] = useState<'pdf' | 'pptx' | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
   const [overflow, setOverflow] = useState<OverflowFinding[] | null>(null);
 
   // Select the first slide once the deck arrives, and never hold a selection
@@ -500,6 +503,10 @@ function Editor({ deckId, onClose }: { deckId: string; onClose: () => void }): R
           deck={deck}
           onChange={(brand) => apply((current) => (brand ? { ...current, brand } : stripBrand(current)))}
         />
+
+        <button className="btn btn--icon" onClick={() => setShowSettings(true)} title="Deck settings">
+          ⚙
+        </button>
 
         <span className="topbar__spacer" />
 
@@ -696,6 +703,14 @@ function Editor({ deckId, onClose }: { deckId: string; onClose: () => void }): R
             setSelectedId(slideId);
             setShowReview(false);
           }}
+        />
+      ) : null}
+
+      {showSettings ? (
+        <DeckSettings
+          deck={deck}
+          onChange={(meta) => apply((current) => ({ ...current, meta: { ...current.meta, ...meta } }))}
+          onClose={() => setShowSettings(false)}
         />
       ) : null}
 
