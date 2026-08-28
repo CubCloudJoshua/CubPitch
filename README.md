@@ -46,6 +46,12 @@ a market number with no beachhead TAM theater, rejects "we have no competition"
 outright, refuses an ask denominated in vibes, and tells you when a slide takes
 more than ninety seconds to read aloud. Nothing it finds blocks a save.
 
+**It rehearses with you.** A presenter console shows the current slide, the next
+one, the speaker notes, and two clocks: one for the slide and one for the whole
+run, each measured against the methodology's budget. The doctrine the deck was
+written under, twenty minutes and ninety seconds a slide, becomes something you
+can see while you practice.
+
 **It measures the layout.** Whether text fits is not a word count: it depends on
 the font, the wrapping, and the box. The exporter measures every slide in the
 same engine that prints it and names the ones being clipped.

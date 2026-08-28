@@ -20,6 +20,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { api, ModelCallError, type DeckSummary, type OverflowFinding } from './api.js';
 import { Coach } from './Coach.js';
 import { Inspector } from './Inspector.js';
+import { Rehearse } from './Rehearse.js';
 import { FittedSlide, Presenter, SlideCanvas } from './SlideCanvas.js';
 import { useDeck, type SaveState } from './useDeck.js';
 
@@ -283,6 +284,7 @@ function Editor({ deckId, onClose }: { deckId: string; onClose: () => void }): R
   const [showReview, setShowReview] = useState(false);
   const [showCoach, setShowCoach] = useState(false);
   const [presenting, setPresenting] = useState(false);
+  const [rehearsing, setRehearsing] = useState(false);
   const [overflow, setOverflow] = useState<OverflowFinding[] | null>(null);
 
   // Select the first slide once the deck arrives, and never hold a selection
@@ -447,6 +449,9 @@ function Editor({ deckId, onClose }: { deckId: string; onClose: () => void }): R
         <button className="btn" onClick={() => setPresenting(true)}>
           Present
         </button>
+        <button className="btn" onClick={() => setRehearsing(true)} title="Notes, next slide, and a clock against the budget">
+          Rehearse
+        </button>
         <button className="btn" onClick={() => void download('pdf')}>
           PDF
         </button>
@@ -593,6 +598,10 @@ function Editor({ deckId, onClose }: { deckId: string; onClose: () => void }): R
 
       {presenting ? (
         <Presenter deck={deck} startAt={Math.max(visible.findIndex((slide) => slide.id === selectedId), 0)} onExit={() => setPresenting(false)} />
+      ) : null}
+
+      {rehearsing ? (
+        <Rehearse deck={deck} startAt={Math.max(visible.findIndex((slide) => slide.id === selectedId), 0)} onExit={() => setRehearsing(false)} />
       ) : null}
     </div>
   );
