@@ -63,3 +63,42 @@ describe('theme registry', () => {
     }
   });
 });
+
+describe('brand overrides', () => {
+  it('derives a full accent set from one colour', async () => {
+    const { resolveTheme } = await import('@cubpitch/theme');
+    const base = getTheme('cubcloud');
+    const branded = resolveTheme(base, { accent: '#1668b0' });
+
+    expect(branded.colors.accent).toBe('#1668b0');
+    // The bright accent is lifted toward white, the ink is auto-contrast, and
+    // the first chart series takes the brand colour.
+    expect(branded.colors.accentBright).not.toBe(base.colors.accentBright);
+    expect(['#F5F5F5', '#111111']).toContain(branded.colors.accentInk);
+    expect(branded.colors.chart[0]).toBe('#1668b0');
+    // Everything else is the base theme: a brand cannot break the layout.
+    expect(branded.colors.bg).toBe(base.colors.bg);
+    expect(branded.fonts).toEqual(base.fonts);
+  });
+
+  it('returns the base theme untouched when there is no brand', async () => {
+    const { resolveTheme, themeForDeck } = await import('@cubpitch/theme');
+    const base = getTheme('cubcloud');
+    expect(resolveTheme(base, undefined)).toBe(base);
+    expect(themeForDeck({ themeId: 'cubcloud' }).colors.accent).toBe(base.colors.accent);
+  });
+
+  it('chooses readable ink for a light and a dark brand colour', async () => {
+    const { resolveTheme } = await import('@cubpitch/theme');
+    const base = getTheme('cubcloud');
+    // A pale brand colour needs dark ink; a deep one needs light ink.
+    expect(resolveTheme(base, { accent: '#FFE08A' }).colors.accentInk).toBe('#111111');
+    expect(resolveTheme(base, { accent: '#0B1B4D' }).colors.accentInk).toBe('#F5F5F5');
+  });
+
+  it('respects an explicit accentInk override', async () => {
+    const { resolveTheme } = await import('@cubpitch/theme');
+    const branded = resolveTheme(getTheme('cubcloud'), { accent: '#1668b0', accentInk: '#FFEEDD' });
+    expect(branded.colors.accentInk).toBe('#FFEEDD');
+  });
+});

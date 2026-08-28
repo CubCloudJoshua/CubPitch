@@ -22,6 +22,17 @@ BRIEF → DECK DOCUMENT → REVIEW
 
 ## What it does that a slide editor does not
 
+**It brands each deck.** A deck picks a base theme and layers a company's colour
+over it. Everything accent-shaped derives from that one value: the accent, the
+brighter hover accent, the text drawn on it (chosen for contrast), and the first
+chart series. The base theme keeps the ground, the type and the layout, so a
+brand cannot make a deck unreadable with one bad colour. The colour flows through
+the web deck, the PDF, and the PowerPoint alike.
+
+**It embeds its images.** Logos, screenshots and team photos are downscaled in
+the browser and carried inside the deck as data URIs, so a deck is
+self-contained and the exporter never has to fetch anything.
+
 **It knows the methodology.** There is no single right deck, so five ship as
 data: the house framework, Sequoia, Y Combinator, Kawasaki 10/20/30, and a16z.
 Y Combinator puts traction fourth because at seed it is the only fact in the
@@ -131,7 +142,7 @@ apps/
   cli/        The cubpitch command
   web/        Editor: rail, canvas, inspector, review, presenter
 examples/     A complete worked deck
-tests/        129 tests
+tests/        136 tests
 ```
 
 Dependencies point one way:

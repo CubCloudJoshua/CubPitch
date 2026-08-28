@@ -1,6 +1,6 @@
 import { visibleSlides, type Deck, type Slide } from '@cubpitch/core';
 import { SlideView } from '@cubpitch/render';
-import { getTheme, SLIDE_HEIGHT, SLIDE_WIDTH, slideCss } from '@cubpitch/theme';
+import { SLIDE_HEIGHT, SLIDE_WIDTH, slideCss, themeForDeck } from '@cubpitch/theme';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
 /**
@@ -25,9 +25,9 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
  */
 const THEME_STYLE_ID = 'cp-theme';
 
-function useThemeStylesheet(themeId: string): void {
+function useThemeStylesheet(deck: Deck): void {
+  const css = slideCss(themeForDeck(deck));
   useLayoutEffect(() => {
-    const css = slideCss(getTheme(themeId));
     let style = document.getElementById(THEME_STYLE_ID);
     if (!style) {
       style = document.createElement('style');
@@ -35,7 +35,7 @@ function useThemeStylesheet(themeId: string): void {
       document.head.append(style);
     }
     if (style.textContent !== css) style.textContent = css;
-  }, [themeId]);
+  }, [css]);
 }
 
 export function SlideCanvas({
@@ -51,8 +51,8 @@ export function SlideCanvas({
   number: number;
   total: number;
 }): ReactNode {
-  const theme = getTheme(deck.themeId);
-  useThemeStylesheet(deck.themeId);
+  const theme = themeForDeck(deck);
+  useThemeStylesheet(deck);
 
   const scale = width / SLIDE_WIDTH;
 

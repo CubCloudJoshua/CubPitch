@@ -92,3 +92,19 @@ describe('deck rendering', () => {
     expect(getTheme('cubcloud').fonts.display).toContain('sans-serif');
   });
 });
+
+describe('brand in the rendered document', () => {
+  it('writes the brand accent into the slide CSS', () => {
+    const deck = { ...sampleDeck(), brand: { accent: '#1668b0' } };
+    const html = renderDeckHtml(deck);
+    // The PDF is this HTML printed by Chromium, so the accent in the CSS is the
+    // accent in the PDF.
+    expect(html).toContain('--cp-accent: #1668b0');
+    expect(html).toContain('--cp-chart-0: #1668b0');
+  });
+
+  it('falls back to the base theme accent with no brand', () => {
+    const html = renderDeckHtml(sampleDeck());
+    expect(html).toContain('--cp-accent: #F07D00');
+  });
+});

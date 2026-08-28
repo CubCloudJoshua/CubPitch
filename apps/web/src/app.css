@@ -585,3 +585,26 @@ select {
   color: var(--ui-accent-bright);
   background: var(--ui-accent-fill);
 }
+
+/* --- Brand swatch --------------------------------------------------------- */
+
+.brand-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 1px solid var(--ui-border-strong);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+}
+.brand-swatch input[type='color'] {
+  position: absolute;
+  inset: -4px;
+  width: calc(100% + 8px);
+  height: calc(100% + 8px);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+}

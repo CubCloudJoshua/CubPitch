@@ -48,6 +48,29 @@ export const DeckMeta = z.object({
 });
 export type DeckMeta = z.infer<typeof DeckMeta>;
 
+/** A six-digit hex colour, with or without the leading hash. */
+const BrandHex = z.string().regex(/^#?[0-9a-fA-F]{6}$/u, 'Use a six-digit hex colour like #F07D00');
+
+/**
+ * A per-deck brand.
+ *
+ * A deck picks a base theme, and a brand layers over it. This is what lets a
+ * portfolio company's deck carry that company's colour without a whole new
+ * theme: the accent flows into the accent, the bright accent, the ink drawn on
+ * it, and the first chart series, all derived from the one value the author
+ * supplies. The base theme still owns the ground, the type and the layout, so a
+ * brand cannot make a deck unreadable by choosing one bad colour.
+ */
+export const Brand = z.object({
+  /** The company's colour. Everything accent-shaped derives from it. */
+  accent: BrandHex.optional(),
+  /** Override the derived bright accent, if the company has a specific one. */
+  accentBright: BrandHex.optional(),
+  /** Override the auto-chosen text colour drawn on the accent. */
+  accentInk: BrandHex.optional(),
+});
+export type Brand = z.infer<typeof Brand>;
+
 export const Deck = z.object({
   /**
    * Constrained rather than merely non-empty. A deck id becomes a directory
@@ -66,6 +89,8 @@ export const Deck = z.object({
    * review counts as missing. Changing it never rewrites content.
    */
   methodologyId: z.string().min(1).default('house'),
+  /** Optional brand colour layered over the base theme. */
+  brand: Brand.optional(),
   meta: DeckMeta.prefault({}),
   slides: z.array(Slide).default([]),
   createdAt: z.string().default(() => new Date().toISOString()),

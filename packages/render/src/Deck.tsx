@@ -1,11 +1,11 @@
 import { visibleSlides, type Deck } from '@cubpitch/core';
-import { getTheme } from '@cubpitch/theme';
+import { themeForDeck } from '@cubpitch/theme';
 import type { ReactNode } from 'react';
 import { SlideView } from './Slide.js';
 
 /** Every visible slide, in order, on its own artboard. */
 export function DeckView({ deck }: { deck: Deck }): ReactNode {
-  const theme = getTheme(deck.themeId);
+  const theme = themeForDeck(deck);
   const slides = visibleSlides(deck);
   return (
     <>

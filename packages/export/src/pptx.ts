@@ -9,7 +9,7 @@ import {
   type Deck,
   type Slide,
 } from '@cubpitch/core';
-import { getTheme, pxToInches, SLIDE_HEIGHT, SLIDE_WIDTH, type Theme } from '@cubpitch/theme';
+import { pxToInches, SLIDE_HEIGHT, SLIDE_WIDTH, themeForDeck, type Theme } from '@cubpitch/theme';
 import {
   createPresentation,
   type PptxChartOptions,
@@ -56,7 +56,7 @@ export interface PptxOptions {
 const LAYOUT_NAME = 'CUBPITCH_16x9';
 
 export async function deckToPptx(deck: Deck, options: PptxOptions = {}): Promise<Buffer> {
-  const theme = getTheme(deck.themeId);
+  const theme = themeForDeck(deck);
   const methodology = getMethodology(deck.methodologyId);
   const type = typeScale(theme, methodology.minFontPt);
 

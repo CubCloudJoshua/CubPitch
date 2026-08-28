@@ -10,11 +10,12 @@ import {
   slideTitle,
   updateSlide,
   visibleSlides,
+  type Brand,
   type Deck,
   type ReviewFinding,
   type SlideType,
 } from '@cubpitch/core';
-import { THEMES } from '@cubpitch/theme';
+import { getTheme, THEMES, themeForDeck } from '@cubpitch/theme';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, ModelCallError, type DeckSummary, type OverflowFinding } from './api.js';
 import { Coach } from './Coach.js';
@@ -409,6 +410,11 @@ function Editor({ deckId, onClose }: { deckId: string; onClose: () => void }): R
           ))}
         </select>
 
+        <BrandControl
+          deck={deck}
+          onChange={(brand) => apply((current) => (brand ? { ...current, brand } : stripBrand(current)))}
+        />
+
         <span className="topbar__spacer" />
 
         <SaveIndicator state={editor.saveState} error={editor.saveError} onReload={() => void editor.reload()} />
@@ -589,6 +595,47 @@ function Editor({ deckId, onClose }: { deckId: string; onClose: () => void }): R
         <Presenter deck={deck} startAt={Math.max(visible.findIndex((slide) => slide.id === selectedId), 0)} onExit={() => setPresenting(false)} />
       ) : null}
     </div>
+  );
+}
+
+/** Remove the brand so a reset produces a deck with no brand key at all. */
+function stripBrand(deck: Deck): Deck {
+  const { brand: _brand, ...rest } = deck;
+  return rest;
+}
+
+/**
+ * The deck's brand colour.
+ *
+ * One control, because a brand is one decision: the company's colour. The
+ * swatch shows what the deck currently renders in, whether that came from the
+ * base theme or a brand override. Everything else about the accent is derived,
+ * so there is nothing else to set.
+ */
+function BrandControl({ deck, onChange }: { deck: Deck; onChange: (brand: Brand | undefined) => void }): ReactNode {
+  const branded = Boolean(deck.brand?.accent);
+  const current = themeForDeck(deck).colors.accent;
+  const baseAccent = getTheme(deck.themeId).colors.accent;
+
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} title="Brand colour">
+      <label
+        className="brand-swatch"
+        style={{ background: current }}
+      >
+        <input
+          type="color"
+          value={current}
+          onChange={(event) => onChange({ ...deck.brand, accent: event.target.value })}
+        />
+      </label>
+      {branded ? (
+        <button className="btn btn--icon" onClick={() => onChange(undefined)} title="Reset to the theme colour">
+          ↺
+        </button>
+      ) : null}
+      {branded && current.toLowerCase() === baseAccent.toLowerCase() ? null : null}
+    </span>
   );
 }
 

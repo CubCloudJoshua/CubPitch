@@ -1,5 +1,5 @@
 import { visibleSlides, type Deck } from '@cubpitch/core';
-import { fontHref, getTheme, slideCss } from '@cubpitch/theme';
+import { fontHref, slideCss, themeForDeck } from '@cubpitch/theme';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { DeckView } from './Deck.js';
 import { SlideView } from './Slide.js';
@@ -27,7 +27,7 @@ function escapeHtml(value: string): string {
 }
 
 export function renderDeckHtml(deck: Deck, options: HtmlOptions = {}): string {
-  const theme = getTheme(deck.themeId);
+  const theme = themeForDeck(deck);
   const body = renderToStaticMarkup(DeckView({ deck }));
   const href = options.webFonts === false ? null : fontHref(theme);
 
@@ -54,7 +54,7 @@ ${body}
 
 /** One slide as a standalone document, for thumbnails and single-slide export. */
 export function renderSlideHtml(deck: Deck, slideId: string, options: HtmlOptions = {}): string {
-  const theme = getTheme(deck.themeId);
+  const theme = themeForDeck(deck);
   const slides = visibleSlides(deck);
   const index = slides.findIndex((slide) => slide.id === slideId);
   const slide = slides[index];
